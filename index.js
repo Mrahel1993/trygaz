@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs'); // استيراد مكتبة exceljs
+const fs = require('fs'); // للعمل مع الملفات
 require('dotenv').config(); // إذا كنت تستخدم متغيرات بيئية
 const express = require('express'); // إضافة Express لتشغيل السيرفر
 
@@ -19,8 +20,28 @@ const bot = new TelegramBot(token, { polling: true });
 // تخزين البيانات من Excel
 let data = [];
 
-// حفظ معرفات المستخدمين الذين يتفاعلون مع البوت
-let userIds = new Set(); // Set للحفاظ على المعرفات الفريدة للمستخدمين
+// مسار ملف JSON لتخزين المستخدمين
+const usersFilePath = './data/users.json';
+
+// تحميل معرفات المستخدمين من ملف JSON
+let userIds = new Set();
+try {
+    const fileData = fs.readFileSync(usersFilePath, 'utf8');
+    userIds = new Set(JSON.parse(fileData));
+    console.log('✅ تم تحميل معرفات المستخدمين من ملف JSON.');
+} catch (error) {
+    console.warn('⚠️ ملف المستخدمين غير موجود أو فارغ. سيتم إنشاؤه عند الحاجة.');
+}
+
+// دالة لحفظ معرفات المستخدمين في ملف JSON
+function saveUserIdsToFile() {
+    try {
+        fs.writeFileSync(usersFilePath, JSON.stringify(Array.from(userIds), null, 2));
+        console.log('✅ تم حفظ معرفات المستخدمين إلى ملف JSON.');
+    } catch (error) {
+        console.error('❌ حدث خطأ أثناء حفظ معرفات المستخدمين:', error.message);
+    }
+}
 
 // دالة لتحميل البيانات من عدة ملفات Excel
 async function loadDataFromExcelFiles(filePaths) {
@@ -84,6 +105,7 @@ const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994']; // إضا�
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     userIds.add(chatId); // حفظ معرف المستخدم
+    saveUserIdsToFile(); // حفظ التغييرات إلى ملف JSON
 
     const options = {
         reply_markup: {
@@ -102,6 +124,9 @@ bot.onText(/\/start/, (msg) => {
 
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
+
+// باقي الكود كما هو...
+
 
 // التعامل مع الضغط على الأزرار والبحث
 bot.on('message', (msg) => {
