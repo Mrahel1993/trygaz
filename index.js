@@ -21,7 +21,7 @@ const bot = new TelegramBot(token, { polling: true });
 let data = [];
 
 // مسار ملف JSON لتخزين المستخدمين
-const usersFilePath = './data/users.json';
+const usersFilePath = './users.json';
 
 // تحميل معرفات المستخدمين من ملف JSON
 let userIds = new Set();
