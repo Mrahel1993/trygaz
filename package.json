@@ -15,6 +15,7 @@
     "rimraf": "^4.0.0",
     "telegraf": "^4.16.3",
     "request-promise-core": "^1.1.4",
+    "googleapis": "^123.0.0",
     "unzipper": "^0.10.11"
   },
   "author": "",
