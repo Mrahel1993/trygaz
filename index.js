@@ -9,53 +9,69 @@ const bot = new TelegramBot(token);
 
 // إنشاء خادم Express
 const app = express();
-
-// إعداد body-parser لقبول JSON
 app.use(bodyParser.json());
 
 // إعداد URL الخاص بـ Webhook
 const webhookUrl = 'https://trygaz.onrender.com'; // استبدل بـ URL الخاص بك
-
-// تعيين Webhook
 bot.setWebHook(`${webhookUrl}/bot`);
 
 // ملفات Excel التي تريد التعامل معها
-const files = ['bur.xlsx', 'kan.xlsx' , 'rfh.xlsx']; // استبدل بأسماء الملفات الفعلية
+const files = ['file1.xlsx', 'file2.xlsx']; // استبدل بأسماء الملفات الفعلية
 
-// وظيفة لقراءة البيانات من ملف Excel
+// وظيفة لقراءة البيانات من ملفات Excel
 function readExcelData(files) {
-  let data = {};
+  let data = [];
   files.forEach(file => {
     const workbook = XLSX.readFile(file);
     const sheetName = workbook.SheetNames[0]; // نفترض أن البيانات في الورقة الأولى
     const worksheet = workbook.Sheets[sheetName];
     const json = XLSX.utils.sheet_to_json(worksheet);
-    data[file] = json;
+    data = data.concat(json); // دمج البيانات من جميع الملفات
   });
   return data;
+}
+
+// وظيفة للبحث في البيانات
+function searchExcelData(data, query) {
+  // البحث في العمود الأول (رقم الهوية) أو العمود الثاني (الاسم)
+  return data.filter(row => 
+    String(row['رقم الهوية']).includes(query) || 
+    (row['الاسم'] && row['الاسم'].toLowerCase().includes(query.toLowerCase()))
+  );
 }
 
 // استلام الطلبات عبر Webhook
 app.post('/bot', (req, res) => {
   const msg = req.body.message;
   const chatId = msg.chat.id;
+  const query = msg.text; // نص البحث من المستخدم
+
+  if (!query) {
+    bot.sendMessage(chatId, "يرجى إدخال رقم هوية أو اسم للبحث.");
+    return res.status(200).send('OK');
+  }
 
   // قراءة البيانات من ملفات Excel
   const data = readExcelData(files);
 
-  let message = "البيانات من ملفات Excel:\n\n";
-  for (const file in data) {
-    message += `من الملف ${file}:\n`;
-    // عرض أول 5 صفوف فقط لتقليل حجم الرسالة
-    const firstRows = data[file].slice(0, 5);
-    firstRows.forEach(row => {
-      message += JSON.stringify(row) + '\n';
-    });
-    message += "\n\n";
-  }
+  // البحث في البيانات
+  const results = searchExcelData(data, query);
 
-  // إرسال البيانات للمستخدم
-  bot.sendMessage(chatId, message);
+  // إذا لم يتم العثور على نتائج
+  if (results.length === 0) {
+    bot.sendMessage(chatId, "لم يتم العثور على نتائج تطابق البحث.");
+  } else {
+    // بناء رسالة النتائج
+    let message = "نتائج البحث:\n\n";
+    results.forEach(row => {
+      message += `رقم الهوية: ${row['رقم الهوية']}\n`;
+      message += `الاسم: ${row['الاسم']}\n`;
+      message += `باقي التفاصيل: ${JSON.stringify(row)}\n\n`;
+    });
+
+    // إرسال الرسالة إلى المستخدم
+    bot.sendMessage(chatId, message);
+  }
 
   // إرسال رد بنجاح للـ Webhook
   res.status(200).send('OK');
