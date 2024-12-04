@@ -4,7 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 // API token الخاص بك
-const token = '7859625373:AAEFlMbm3Sfagj4S9rx5ixbfqItE1jNpDos';
+const token = 'YOUR_API_TOKEN';
 const bot = new TelegramBot(token);
 
 // إنشاء خادم Express
@@ -12,11 +12,11 @@ const app = express();
 app.use(bodyParser.json());
 
 // إعداد URL الخاص بـ Webhook
-const webhookUrl = 'https://trygaz.onrender.com'; // استبدل بـ URL الخاص بك
+const webhookUrl = 'https://your-server.com/bot'; // استبدل بـ URL الخاص بك
 bot.setWebHook(`${webhookUrl}/bot`);
 
 // ملفات Excel التي تريد التعامل معها
-const files = ['bur.xlsx', 'kan.xlsx' , 'rfh.xlsx']; // استبدل بأسماء الملفات الفعلية
+const files = ['file1.xlsx', 'file2.xlsx']; // استبدل بأسماء الملفات الفعلية
 
 // وظيفة لقراءة البيانات من ملفات Excel
 function readExcelData(files) {
@@ -25,18 +25,30 @@ function readExcelData(files) {
     const workbook = XLSX.readFile(file);
     const sheetName = workbook.SheetNames[0]; // نفترض أن البيانات في الورقة الأولى
     const worksheet = workbook.Sheets[sheetName];
-    const json = XLSX.utils.sheet_to_json(worksheet);
-    data = data.concat(json); // دمج البيانات من جميع الملفات
+    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); // استخراج البيانات كصفوف مصفوفة
+    const headers = json[0]; // أسماء الأعمدة
+    const rows = json.slice(1); // الصفوف بدون العناوين
+
+    rows.forEach(row => {
+      let rowData = {};
+      headers.forEach((header, index) => {
+        rowData[header || `عمود ${index + 1}`] = row[index] || ""; // استخدام أسماء الأعمدة أو تسمية الأعمدة غير المسماة
+      });
+      data.push(rowData);
+    });
   });
   return data;
 }
 
-// وظيفة للبحث في البيانات
+// وظيفة للبحث في العمود الأول أو الثاني
 function searchExcelData(data, query) {
-  return data.filter(row => 
-    String(row['رقم الهوية']).includes(query) || 
-    (row['الاسم'] && row['الاسم'].toLowerCase().includes(query.toLowerCase()))
-  );
+  return data.filter(row => {
+    const columns = Object.keys(row); // أسماء الأعمدة
+    return (
+      String(row[columns[0]] || "").toLowerCase().includes(query.toLowerCase()) || // البحث في العمود الأول
+      String(row[columns[1]] || "").toLowerCase().includes(query.toLowerCase())    // البحث في العمود الثاني
+    );
+  });
 }
 
 // استلام الطلبات عبر Webhook
@@ -46,7 +58,7 @@ app.post('/bot', (req, res) => {
   const query = msg.text; // نص البحث من المستخدم
 
   if (!query) {
-    bot.sendMessage(chatId, "يرجى إدخال رقم هوية أو اسم للبحث.");
+    bot.sendMessage(chatId, "يرجى إدخال نص للبحث.");
     return res.status(200).send('OK');
   }
 
