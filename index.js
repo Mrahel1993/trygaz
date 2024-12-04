@@ -1,78 +1,79 @@
 const TelegramBot = require('node-telegram-bot-api');
-const ExcelJS = require('exceljs'); // استيراد مكتبة exceljs
-const express = require('express'); // إضافة Express لتشغيل السيرفر
-require('dotenv').config(); // تحميل متغيرات البيئة
+const ExcelJS = require('exceljs');
+require('dotenv').config();
+const express = require('express');
+const https = require('https');
+const fs = require('fs');
 
-const app = express(); // إنشاء تطبيق Express
-const port = process.env.PORT || 4000; // المنفذ الافتراضي
+// إعداد سيرفر Express
+const app = express();
+const port = process.env.PORT || 4000;
+const serverUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com'; // رابط الويب هوك الذي يجب أن ترسله من Telegram
 
-// إعداد Webhook
-const token = process.env.TELEGRAM_BOT_TOKEN;
-const webhookUrl = process.env.RENDER_URL;
+// استبدل بالتوكن الخاص بك
+const token = process.env.TELEGRAM_BOT_TOKEN || '7859625373:AAEFlMbm3Sfagj4S9rx5ixbfqItE1jNpDos';
 
-if (!token || !webhookUrl) {
-    console.error('❌ يجب ضبط TELEGRAM_BOT_TOKEN و RENDER_URL في متغيرات البيئة.');
-    process.exit(1);
-}
-
-// إنشاء البوت
-const bot = new TelegramBot(token, { webHook: true });
-bot.setWebHook(`${webhookUrl}/bot${token}`);
-
-// استضافة Webhook
-app.use(express.json());
-app.post(`/bot${token}`, (req, res) => {
-    bot.processUpdate(req.body);
-    res.sendStatus(200);
-});
-
-// إعداد صفحة رئيسية للتأكد من تشغيل السيرفر
-app.get('/', (req, res) => {
-    res.send('✅ The bot is running successfully with Webhook.');
-});
+// إنشاء البوت باستخدام Webhook
+const bot = new TelegramBot(token);
 
 // تخزين البيانات من Excel
 let data = [];
-let userIds = new Set(); // تخزين معرفات المستخدمين
-const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
-// تحميل بيانات من ملفات Excel
+// حفظ معرفات المستخدمين الذين يتفاعلون مع البوت
+let userIds = new Set();
+
+// دالة لتحميل البيانات من عدة ملفات Excel
 async function loadDataFromExcelFiles(filePaths) {
-    data = []; // إعادة تعيين البيانات
+    data = [];
     try {
         for (const filePath of filePaths) {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.readFile(filePath);
             const worksheet = workbook.worksheets[0];
+            const fileStats = fs.statSync(filePath);
+            const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
 
             worksheet.eachRow((row) => {
                 const idNumber = row.getCell(1).value?.toString().trim();
                 const name = row.getCell(2).value?.toString().trim();
+                const province = row.getCell(3).value?.toString().trim();
+                const district = row.getCell(4).value?.toString().trim();
+                const area = row.getCell(5).value?.toString().trim();
+                const distributorId = row.getCell(6).value?.toString().trim();
+                const distributorName = row.getCell(7).value?.toString().trim();
+                const distributorPhone = row.getCell(8).value?.toString().trim();
+                const status = row.getCell(9).value?.toString().trim();
 
                 if (idNumber && name) {
                     data.push({
                         idNumber,
                         name,
-                        province: row.getCell(3).value || 'غير متوفر',
-                        district: row.getCell(4).value || 'غير متوفر',
-                        area: row.getCell(5).value || 'غير متوفر',
-                        distributorId: row.getCell(6).value || 'غير متوفر',
-                        distributorName: row.getCell(7).value || 'غير متوفر',
-                        distributorPhone: row.getCell(8).value || 'غير متوفر',
-                        status: row.getCell(9).value || 'غير متوفر',
+                        province: province || "غير متوفر",
+                        district: district || "غير متوفر",
+                        area: area || "غير متوفر",
+                        distributorId: distributorId || "غير متوفر",
+                        distributorName: distributorName || "غير متوفر",
+                        distributorPhone: distributorPhone || "غير متوفر",
+                        status: status || "غير متوفر",
+                        deliveryDate: lastModifiedDate,
                     });
                 }
             });
         }
-        console.log('📁 تم تحميل البيانات بنجاح.');
+
+        console.log('📁 تم تحميل البيانات من جميع الملفات بنجاح.');
+        sendMessageToAdmins("📢 تم تحديث البيانات من جميع الملفات بنجاح! يمكنك الآن البحث في البيانات المحدثة.");
     } catch (error) {
-        console.error('❌ خطأ أثناء تحميل البيانات:', error.message);
+        console.error('❌ حدث خطأ أثناء قراءة ملفات Excel:', error.message);
     }
 }
 
-// تحميل البيانات عند بدء التشغيل
-const excelFiles = ['bur.xlsx', 'kan.xlsx', 'rfh.xlsx']; // استبدل بالأسماء الفعلية للملفات
+// استدعاء الدالة مع ملفات متعددة
+const excelFiles = ['bur.xlsx', 'kan.xlsx', 'rfh.xlsx'];
 loadDataFromExcelFiles(excelFiles);
+
+// قائمة معرفات المسؤولين
+const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
 // الرد على أوامر البوت
 bot.onText(/\/start/, (msg) => {
@@ -84,63 +85,99 @@ bot.onText(/\/start/, (msg) => {
             keyboard: [
                 [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
                 [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
-                ...(adminIds.includes(chatId.toString()) ? [[{ text: "📢 إرسال رسالة للجميع" }]] : []),
             ],
             resize_keyboard: true,
+            one_time_keyboard: false,
         },
     };
 
-    bot.sendMessage(chatId, "مرحبًا! اختر أحد الخيارات:", options);
+    if (adminIds.includes(chatId.toString())) {
+        options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
+    }
+
+    bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
 
+// التعامل مع الضغط على الأزرار والبحث
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const input = msg.text.trim();
-  
+
+    if (input === '/start' || input.startsWith('/')) return;
 
     if (input === "🔍 البحث برقم الهوية أو الاسم") {
         bot.sendMessage(chatId, "📝 أدخل رقم الهوية أو الاسم للبحث:");
-      
-      
     } else if (input === "📞 معلومات الاتصال") {
-        bot.sendMessage(chatId, "📞 للتواصل معنا: [https://t.me/YourContact]", { parse_mode: 'Markdown' });
-      
-      
+        const contactMessage = `
+📞 **معلومات الاتصال:**
+للمزيد من الدعم أو الاستفسار 
+في حال حدوث اي خلل 
+ يمكنك التواصل معنا عبر:
+💬 تلجرام: [https://t.me/AhmedGarqoud]
+        `;
+        bot.sendMessage(chatId, contactMessage, { parse_mode: 'Markdown' });
     } else if (input === "📖 معلومات عن البوت") {
-        bot.sendMessage(chatId, "🤖 بوت البحث في بيانات الغاز. \n 🔧 تم تطويره بواسطة [Ahmed](https://t.me/AhmedGarqoud)", { parse_mode: 'Markdown' });
-      
-      
-    } else if (input === "📢 إرسال رسالة للجميع" && adminIds.includes(chatId.toString())) {
-        bot.sendMessage(chatId, "✉️ اكتب الرسالة لإرسالها:");
-        bot.once('message', (broadcastMsg) => {
-            userIds.forEach((userId) => {
-                bot.sendMessage(userId, broadcastMsg.text);
-            });
-            bot.sendMessage(chatId, "✅ تم الإرسال للجميع.");
-        });
-
-      
+        const aboutMessage = `
+🤖 **معلومات عن البوت:**
+هذا البوت يتيح لك البحث عن اسمك في كشوفات الغاز باستخدام رقم الهوية أو اسمك كما هو مسجل في كشوفات الغاز.
+هدفنا هو تسهيل الوصول إلى بيانتات.
+هذا بوت مجهود شخصي ولا يتبع لاي جهة
+        `;
+        bot.sendMessage(chatId, aboutMessage, { parse_mode: 'Markdown' });
     } else {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
-      
-
         if (user) {
-            bot.sendMessage(chatId, `
-🔍 **تفاصيل الطلب**:
-👤 الاسم: ${user.name}
-🏘️ الحي: ${user.area}
-🏙️ المدينة: ${user.district}
-📍 المحافظة: ${user.province}
-📞 موزع: ${user.distributorName} (${user.distributorPhone})
-📜 الحالة: ${user.status}
-            `);
+            const response = `
+🔍 **تفاصيل الطلب:**
+
+👤 **الاسم**: ${user.name}
+🏘️ **الحي / المنطقة**: ${user.area}
+🏙️ **المدينة**: ${user.district}
+📍 **المحافظة**: ${user.province}
+
+📛 **اسم الموزع**: ${user.distributorName}
+📞 **رقم جوال الموزع**: ${user.distributorPhone}
+🆔 **هوية الموزع**: ${user.distributorId}
+
+📜 **الحالة**: ${user.status}
+📅 **تاريخ صدور الكشف**: ("30 / 11/ 2024 ")
+            `;
+            bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, "⚠️ لم يتم العثور على البيانات.");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
         }
     }
 });
 
-// تشغيل السيرفر
-app.listen(port, () => {
-    console.log(`🚀 السيرفر يعمل على المنفذ ${port}`);
+// إرسال رسالة جماعية
+async function sendBroadcastMessage(message, adminChatId) {
+    userIds.forEach(userId => {
+        bot.sendMessage(userId, message);
+    });
+    bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة للجميع بنجاح.");
+}
+
+// إرسال تنبيه للمسؤولين
+function sendMessageToAdmins(message) {
+    adminIds.forEach(adminId => {
+        bot.sendMessage(adminId, message);
+    });
+}
+
+// إعداد Webhook
+bot.setWebHook(`${serverUrl}`);
+
+// التعامل مع Webhook
+app.post('/webhook', express.json(), (req, res) => {
+    const update = req.body;
+    bot.processUpdate(update); // معالجة التحديثات القادمة من Telegram
+    res.sendStatus(200); // إرسال استجابة بـ 200
+});
+
+// تشغيل السيرفر باستخدام HTTPS
+https.createServer({
+    key: fs.readFileSync('path/to/private-key.pem'), // استخدم مسار المفتاح الخاص بك
+    cert: fs.readFileSync('path/to/certificate.pem'), // استخدم مسار الشهادة الخاصة بك
+}, app).listen(port, () => {
+    console.log(`Server is running on port ${port}`);
 });
