@@ -7,7 +7,7 @@ const app = express();
 app.use(bodyParser.json());
 
 // ملفات Excel
-const files = ['bur.xlsx', 'kan.xlsx' , 'rfh.xlsx']; // استبدل بأسماء ملفاتك
+const files = ['bur.xlsx', 'kan.xlsx' , 'rfh.xlsx'] ; // استبدل بأسماء ملفاتك
 
 // استلام الطلبات عبر Webhook
 app.post('/bot', (req, res) => {
@@ -17,7 +17,7 @@ app.post('/bot', (req, res) => {
 
   // إرسال رسالة مع الزر للمستخدم
   if (query === '/start') {
-    bot.sendMessageWithButton(chatId);
+    bot.sendMainMenu(chatId); // إرسال لوحة المفاتيح مع الخيارات
     return res.status(200).send('OK');
   }
 
