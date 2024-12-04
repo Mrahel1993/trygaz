@@ -2,13 +2,11 @@ const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 require('dotenv').config();
 const express = require('express');
-const https = require('https');
-const fs = require('fs');
 
 // إعداد سيرفر Express
 const app = express();
 const port = process.env.PORT || 4000;
-const serverUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com'; // رابط الويب هوك الذي يجب أن ترسله من Telegram
+const serverUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com'; // رابط الويب هوك عبر HTTP
 
 // استبدل بالتوكن الخاص بك
 const token = process.env.TELEGRAM_BOT_TOKEN || '7859625373:AAEFlMbm3Sfagj4S9rx5ixbfqItE1jNpDos';
@@ -30,7 +28,7 @@ async function loadDataFromExcelFiles(filePaths) {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.readFile(filePath);
             const worksheet = workbook.worksheets[0];
-            const fileStats = fs.statSync(filePath);
+            const fileStats = require('fs').statSync(filePath);
             const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
 
             worksheet.eachRow((row) => {
@@ -62,7 +60,6 @@ async function loadDataFromExcelFiles(filePaths) {
         }
 
         console.log('📁 تم تحميل البيانات من جميع الملفات بنجاح.');
-        sendMessageToAdmins("📢 تم تحديث البيانات من جميع الملفات بنجاح! يمكنك الآن البحث في البيانات المحدثة.");
     } catch (error) {
         console.error('❌ حدث خطأ أثناء قراءة ملفات Excel:', error.message);
     }
@@ -149,35 +146,17 @@ bot.on('message', (msg) => {
     }
 });
 
-// إرسال رسالة جماعية
-async function sendBroadcastMessage(message, adminChatId) {
-    userIds.forEach(userId => {
-        bot.sendMessage(userId, message);
-    });
-    bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة للجميع بنجاح.");
-}
-
-// إرسال تنبيه للمسؤولين
-function sendMessageToAdmins(message) {
-    adminIds.forEach(adminId => {
-        bot.sendMessage(adminId, message);
-    });
-}
-
-// إعداد Webhook
-bot.setWebHook(`${serverUrl}`);
+// إعداد Webhook بدون HTTPS
+bot.setWebHook(`${serverUrl}/webhook`);
 
 // التعامل مع Webhook
 app.post('/webhook', express.json(), (req, res) => {
     const update = req.body;
-    bot.processUpdate(update); // معالجة التحديثات القادمة من Telegram
-    res.sendStatus(200); // إرسال استجابة بـ 200
+    bot.processUpdate(update);
+    res.sendStatus(200);
 });
 
-// تشغيل السيرفر باستخدام HTTPS
-https.createServer({
-    key: fs.readFileSync('path/to/private-key.pem'), // استخدم مسار المفتاح الخاص بك
-    cert: fs.readFileSync('path/to/certificate.pem'), // استخدم مسار الشهادة الخاصة بك
-}, app).listen(port, () => {
+// تشغيل السيرفر باستخدام HTTP
+app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
