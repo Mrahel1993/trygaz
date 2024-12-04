@@ -4,7 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 // API token الخاص بك
-const token = 'YOUR_API_TOKEN';
+const token = '7859625373:AAEFlMbm3Sfagj4S9rx5ixbfqItE1jNpDos';
 const bot = new TelegramBot(token);
 
 // إنشاء خادم Express
@@ -12,11 +12,11 @@ const app = express();
 app.use(bodyParser.json());
 
 // إعداد URL الخاص بـ Webhook
-const webhookUrl = 'https://your-server.com/bot'; // استبدل بـ URL الخاص بك
+const webhookUrl = 'https://trygaz.onrender.com'; // استبدل بـ URL الخاص بك
 bot.setWebHook(`${webhookUrl}/bot`);
 
 // ملفات Excel التي تريد التعامل معها
-const files = ['file1.xlsx', 'file2.xlsx']; // استبدل بأسماء الملفات الفعلية
+const files = ['bur.xlsx', 'kan.xlsx' , 'rfh.xlsx']; // استبدل بأسماء الملفات الفعلية
 
 // وظيفة لقراءة البيانات من ملفات Excel
 function readExcelData(files) {
