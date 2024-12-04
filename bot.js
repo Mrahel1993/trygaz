@@ -19,31 +19,35 @@ bot.on('message', (msg) => {
   }
 });
 
-// دالة إرسال رسالة مع زر
-function sendMessageWithButton(chatId) {
+// دالة إرسال رسالة مع زر لوحة مفاتيح مخصصة
+function sendMainMenu(chatId) {
   const options = {
     reply_markup: {
-      inline_keyboard: [
+      keyboard: [
         [
-          {
-            text: 'إرسال رسالة',
-            callback_data: 'send_message', // بيانات الزر
-          },
+          { text: 'إرسال رسالة للجميع' },
+          { text: 'ابحث في البيانات' },
         ],
       ],
+      one_time_keyboard: true, // إخفاء لوحة المفاتيح بعد الضغط
     },
   };
   
-  const welcomeMessage = "مرحبًا! اضغط على الزر لإرسال رسالة.";
+  const welcomeMessage = "مرحبًا! اختر أحد الخيارات:";
   bot.sendMessage(chatId, welcomeMessage, options);
 }
 
 // التعامل مع الزر عند الضغط عليه
-bot.on('callback_query', (query) => {
-  if (query.data === 'send_message') {
-    const chatId = query.message.chat.id;
-    const responseMessage = 'هذه هي الرسالة التي تم إرسالها بعد الضغط على الزر!';
-    bot.sendMessage(chatId, responseMessage);
+bot.on('message', (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
+
+  if (text === 'إرسال رسالة للجميع') {
+    const responseMessage = 'هذه هي الرسالة التي تم إرسالها لجميع المستخدمين!';
+    sendMessageToAllUsers(responseMessage);
+    bot.sendMessage(chatId, "تم إرسال الرسالة لجميع المستخدمين.");
+  } else if (text === 'ابحث في البيانات') {
+    bot.sendMessage(chatId, "يرجى إرسال النص الذي ترغب في البحث عنه.");
   }
 });
 
@@ -55,4 +59,4 @@ function sendMessageToAllUsers(message) {
 }
 
 // تصدير الوظائف لاستخدامها في أماكن أخرى
-module.exports = { bot, sendMessageToAllUsers, sendMessageWithButton };
+module.exports = { bot, sendMessageToAllUsers, sendMainMenu };
