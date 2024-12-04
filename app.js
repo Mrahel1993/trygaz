@@ -7,7 +7,7 @@ const app = express();
 app.use(bodyParser.json());
 
 // ملفات Excel
-const files = ['file1.xlsx', 'file2.xlsx']; // استبدل بأسماء ملفاتك
+const files = ['bur.xlsx', 'kan.xlsx' , 'rfh.xlsx']; // استبدل بأسماء ملفاتك
 
 // استلام الطلبات عبر Webhook
 app.post('/bot', (req, res) => {
