@@ -33,7 +33,6 @@ function readExcelData(files) {
 
 // وظيفة للبحث في البيانات
 function searchExcelData(data, query) {
-  // البحث في العمود الأول (رقم الهوية) أو العمود الثاني (الاسم)
   return data.filter(row => 
     String(row['رقم الهوية']).includes(query) || 
     (row['الاسم'] && row['الاسم'].toLowerCase().includes(query.toLowerCase()))
@@ -57,23 +56,20 @@ app.post('/bot', (req, res) => {
   // البحث في البيانات
   const results = searchExcelData(data, query);
 
-  // إذا لم يتم العثور على نتائج
   if (results.length === 0) {
     bot.sendMessage(chatId, "لم يتم العثور على نتائج تطابق البحث.");
   } else {
-    // بناء رسالة النتائج
     let message = "نتائج البحث:\n\n";
     results.forEach(row => {
-      message += `رقم الهوية: ${row['رقم الهوية']}\n`;
-      message += `الاسم: ${row['الاسم']}\n`;
-      message += `باقي التفاصيل: ${JSON.stringify(row)}\n\n`;
+      Object.keys(row).forEach(key => {
+        message += `${key}: ${row[key]}\n`; // اسم العمود + القيمة
+      });
+      message += "\n"; // مسافة بين السجلات
     });
 
-    // إرسال الرسالة إلى المستخدم
     bot.sendMessage(chatId, message);
   }
 
-  // إرسال رد بنجاح للـ Webhook
   res.status(200).send('OK');
 });
 
