@@ -7,13 +7,19 @@ const app = express();
 app.use(bodyParser.json());
 
 // ملفات Excel
-const files = ['bur.xlsx', 'kan.xlsx' , 'rfh.xlsx']; // استبدل بأسماء ملفاتك
+const files = ['file1.xlsx', 'file2.xlsx']; // استبدل بأسماء ملفاتك
 
 // استلام الطلبات عبر Webhook
 app.post('/bot', (req, res) => {
   const msg = req.body.message;
   const chatId = msg.chat.id;
   const query = msg.text;
+
+  // إرسال رسالة مع الزر للمستخدم
+  if (query === '/start') {
+    bot.sendMessageWithButton(chatId);
+    return res.status(200).send('OK');
+  }
 
   if (!query) {
     bot.sendMessage(chatId, "يرجى إدخال نص للبحث.");
@@ -43,7 +49,7 @@ app.post('/bot', (req, res) => {
   res.status(200).send('OK');
 });
 
-// بدء الخادم
+// بدء الخادم على المنفذ 3000
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Webhook server is running on port ${port}`);
