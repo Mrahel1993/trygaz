@@ -16,7 +16,7 @@ const webhookUrl = 'https://trygaz.onrender.com'; // استبدل بـ URL ال�
 bot.setWebHook(`${webhookUrl}/bot`);
 
 // ملفات Excel التي تريد التعامل معها
-const files = ['file1.xlsx', 'file2.xlsx']; // استبدل بأسماء الملفات الفعلية
+const files = ['bur.xlsx', 'kan.xlsx' , 'rfh.xlsx']; // استبدل بأسماء الملفات الفعلية
 
 // وظيفة لقراءة البيانات من ملفات Excel
 function readExcelData(files) {
