@@ -1,4 +1,3 @@
-// جعل الاكسل ديناميكي لا يعتمد على الاعمدة
 const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
@@ -59,7 +58,8 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', userSchema);
-/ دالة لتحميل البيانات من ملفات Excel في مجلد معين
+
+// دالة لتحميل البيانات من ملفات Excel في مجلد معين
 async function loadExcelFilesFromDirectory(directoryPath) {
     data = []; // إعادة تعيين البيانات في كل مرة
     try {
@@ -81,26 +81,30 @@ async function loadExcelFilesFromDirectory(directoryPath) {
             const fileStats = fs.statSync(filePath);
             const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
 
-            // قراءة رؤوس الأعمدة
-            const headers = worksheet.getRow(1).values;
+            worksheet.eachRow((row) => {
+                const idNumber = row.getCell(1).value?.toString().trim();
+                const name = row.getCell(2).value?.toString().trim();
+                const province = row.getCell(3).value?.toString().trim();
+                const district = row.getCell(4).value?.toString().trim();
+                const area = row.getCell(5).value?.toString().trim();
+                const distributorId = row.getCell(6).value?.toString().trim();
+                const distributorName = row.getCell(7).value?.toString().trim();
+                const distributorPhone = row.getCell(8).value?.toString().trim();
+                const status = row.getCell(9).value?.toString().trim();
 
-            worksheet.eachRow((row, rowIndex) => {
-                if (rowIndex === 1) return; // تخطي صف الرؤوس
-                const rowData = {};
-
-                // استخدام الرؤوس لتحديد الأعمدة
-                headers.forEach((header, index) => {
-                    // التحقق من وجود قيمة للخلية
-                    const value = row.getCell(index + 1).value?.toString().trim() || "غير متوفر";
-                    rowData[header] = value;
-                });
-
-                // إضافة تاريخ التسليم
-                rowData['deliveryDate'] = lastModifiedDate;
-
-                // إضافة البيانات إلى المصفوفة إذا كان هناك رقم هوية
-                if (rowData['idNumber']) {
-                    data.push(rowData);
+                if (idNumber) {
+                    data.push({
+                        idNumber,
+                        name: name || "غير متوفر",
+                        province: province || "غير متوفر",
+                        district: district || "غير متوفر",
+                        area: area || "غير متوفر",
+                        distributorId: distributorId || "غير متوفر",
+                        distributorName: distributorName || "غير متوفر",
+                        distributorPhone: distributorPhone || "غير متوفر",
+                        status: status || "غير متوفر",
+                        deliveryDate: lastModifiedDate,
+                    });
                 }
             });
         }
@@ -155,6 +159,7 @@ bot.on('message', async (msg) => {
         const contactMessage = `
 📞 **معلومات الاتصال:**
 للمزيد من الدعم أو الاستفسار
+في حال حدوث اي خلل
 يمكنك التواصل معنا عبر:
 💬 تلجرام: [https://t.me/AhmedGarqoud]
         `;
@@ -163,6 +168,9 @@ bot.on('message', async (msg) => {
         const aboutMessage = `
 🤖 **معلومات عن البوت:**
 هذا البوت يتيح لك البحث عن اسمك في كشوفات الغاز باستخدام رقم الهوية أو اسمك كما هو مسجل في كشوفات الغاز.
+- يتم عرض تفاصيل اسمك بما في ذلك بيانات الموزع وحالة طلبك.
+هدفنا هو تسهيل الوصول إلى بيانتات.
+هذا بوت مجهود شخصي ولا يتبع لاي جهة.
 🔧 **التطوير والصيانة**: تم تطوير هذا البوت بواسطة [احمد محمد].
         `;
         bot.sendMessage(chatId, aboutMessage, { parse_mode: 'Markdown' });
@@ -176,6 +184,15 @@ bot.on('message', async (msg) => {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
         if (user) {
+            const response = `
+🔍 **تفاصيل الطلب:**
+👤 **الاسم**: ${user.name}
+🏘️ **الحي / المنطقة**: ${user.area}
+🏙️ **المدينة**: ${user.district}
+📍 **المحافظة**: ${user.province}
+📛 **اسم الموزع**: ${user.distributorName}
+📞 **رقم جوال الموزع**: ${user.distributorPhone}
+🆔 **هوية الموزع**: ${user.distributorId}
             // إنشاء رسالة ديناميكية لعرض النتائج
             let response = "🔍 **تفاصيل الطلب:**\n\n";
             for (const [key, value] of Object.entries(user)) {
@@ -186,13 +203,29 @@ bot.on('message', async (msg) => {
                 response += `**${formattedKey}**: ${value || "غير متوفر"}\n`;
             }
 
+📜 **الحالة**: ${user.status}
+📅 **تاريخ صدور الكشف**: ("21 /12/ 2024")
+            `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   21 /12/ 2024");
             bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
         }
     }
 
     // حفظ بيانات المستخدم في MongoDB
+   const userData = {
+    telegramId: msg.from.id,
+    username: msg.from.username || "No Username",  // اسم المستخدم
+    firstName: msg.from.first_name || "No First Name",  // الاسم الأول
+    lastName: msg.from.last_name || "No Last Name",  // الاسم الأخير
+    languageCode: msg.from.language_code || "en",  // اللغة
+    // photo: msg.from.photo ? msg.from.photo.file_id : null,  // صورة الملف الشخصي (إذا كانت موجودة)
+    bio: msg.from.bio || "No Bio",  // السيرة الذاتية
+    phoneNumber: msg.contact ? msg.contact.phone_number : null,  // رقم الهاتف (إذا شاركه المستخدم)
+    isBot: msg.from.is_bot,  // إذا كان المستخدم بوت
+    chatId: msg.chat.id,  // معرّف المحادثة
+  };
     const userData = {
         telegramId: msg.from.id,
         username: msg.from.username || "No Username",
@@ -224,7 +257,7 @@ async function sendBroadcastMessage(message, adminChatId) {
     try {
         // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
         const users = await User.find({});
-
+        
         // إرسال الرسالة لكل مستخدم
         for (const user of users) {
             try {
