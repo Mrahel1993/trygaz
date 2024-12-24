@@ -22,7 +22,7 @@ const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z
 // إنشاء البوت
 const bot = new TelegramBot(token, { polling: false });
 
-const webhookUrl = process.env.WEBHOOK_URL || '';
+const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
 bot.setWebHook(`${webhookUrl}/bot${token}`);
 
 app.post(`/bot${token}`, (req, res) => {
