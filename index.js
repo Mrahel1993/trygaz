@@ -59,8 +59,7 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', userSchema);
-
-// دالة لتحميل البيانات من ملفات Excel في مجلد معين
+/ دالة لتحميل البيانات من ملفات Excel في مجلد معين
 async function loadExcelFilesFromDirectory(directoryPath) {
     data = []; // إعادة تعيين البيانات في كل مرة
     try {
@@ -82,30 +81,26 @@ async function loadExcelFilesFromDirectory(directoryPath) {
             const fileStats = fs.statSync(filePath);
             const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
 
-            worksheet.eachRow((row) => {
-                const idNumber = row.getCell(1).value?.toString().trim();
-                const name = row.getCell(2).value?.toString().trim();
-                const province = row.getCell(3).value?.toString().trim();
-                const district = row.getCell(4).value?.toString().trim();
-                const area = row.getCell(5).value?.toString().trim();
-                const distributorId = row.getCell(6).value?.toString().trim();
-                const distributorName = row.getCell(7).value?.toString().trim();
-                const distributorPhone = row.getCell(8).value?.toString().trim();
-                const status = row.getCell(9).value?.toString().trim();
+            // قراءة رؤوس الأعمدة
+            const headers = worksheet.getRow(1).values;
 
-                if (idNumber) {
-                    data.push({
-                        idNumber,
-                        name: name || "غير متوفر",
-                        province: province || "غير متوفر",
-                        district: district || "غير متوفر",
-                        area: area || "غير متوفر",
-                        distributorId: distributorId || "غير متوفر",
-                        distributorName: distributorName || "غير متوفر",
-                        distributorPhone: distributorPhone || "غير متوفر",
-                        status: status || "غير متوفر",
-                        deliveryDate: lastModifiedDate,
-                    });
+            worksheet.eachRow((row, rowIndex) => {
+                if (rowIndex === 1) return; // تخطي صف الرؤوس
+                const rowData = {};
+
+                // استخدام الرؤوس لتحديد الأعمدة
+                headers.forEach((header, index) => {
+                    // التحقق من وجود قيمة للخلية
+                    const value = row.getCell(index + 1).value?.toString().trim() || "غير متوفر";
+                    rowData[header] = value;
+                });
+
+                // إضافة تاريخ التسليم
+                rowData['deliveryDate'] = lastModifiedDate;
+
+                // إضافة البيانات إلى المصفوفة إذا كان هناك رقم هوية
+                if (rowData['idNumber']) {
+                    data.push(rowData);
                 }
             });
         }
