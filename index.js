@@ -1,3 +1,4 @@
+// جعل الاكسل ديناميكي لا يعتمد على الاعمدة
 const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
@@ -159,7 +160,6 @@ bot.on('message', async (msg) => {
         const contactMessage = `
 📞 **معلومات الاتصال:**
 للمزيد من الدعم أو الاستفسار
-في حال حدوث اي خلل
 يمكنك التواصل معنا عبر:
 💬 تلجرام: [https://t.me/AhmedGarqoud]
         `;
@@ -168,9 +168,6 @@ bot.on('message', async (msg) => {
         const aboutMessage = `
 🤖 **معلومات عن البوت:**
 هذا البوت يتيح لك البحث عن اسمك في كشوفات الغاز باستخدام رقم الهوية أو اسمك كما هو مسجل في كشوفات الغاز.
-- يتم عرض تفاصيل اسمك بما في ذلك بيانات الموزع وحالة طلبك.
-هدفنا هو تسهيل الوصول إلى بيانتات.
-هذا بوت مجهود شخصي ولا يتبع لاي جهة.
 🔧 **التطوير والصيانة**: تم تطوير هذا البوت بواسطة [احمد محمد].
         `;
         bot.sendMessage(chatId, aboutMessage, { parse_mode: 'Markdown' });
@@ -184,40 +181,34 @@ bot.on('message', async (msg) => {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
         if (user) {
-            const response = `
-🔍 **تفاصيل الطلب:**
+            // إنشاء رسالة ديناميكية لعرض النتائج
+            let response = "🔍 **تفاصيل الطلب:**\n\n";
+            for (const [key, value] of Object.entries(user)) {
+                // تحويل أسماء الأعمدة إلى عناوين مفهومة
+                const formattedKey = key
+                    .replace(/([A-Z])/g, ' $1') // إضافة مسافة قبل الأحرف الكبيرة
+                    .replace(/^./, str => str.toUpperCase()); // تحويل أول حرف إلى كبير
+                response += `**${formattedKey}**: ${value || "غير متوفر"}\n`;
+            }
 
-👤 **الاسم**: ${user.name}
-🏘️ **الحي / المنطقة**: ${user.area}
-🏙️ **المدينة**: ${user.district}
-📍 **المحافظة**: ${user.province}
-
-📛 **اسم الموزع**: ${user.distributorName}
-📞 **رقم جوال الموزع**: ${user.distributorPhone}
-🆔 **هوية الموزع**: ${user.distributorId}
-
-📜 **الحالة**: ${user.status}
-📅 **تاريخ صدور الكشف**: ("21 /12/ 2024")
-            `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   21 /12/ 2024");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
         }
     }
 
     // حفظ بيانات المستخدم في MongoDB
-   const userData = {
-    telegramId: msg.from.id,
-    username: msg.from.username || "No Username",  // اسم المستخدم
-    firstName: msg.from.first_name || "No First Name",  // الاسم الأول
-    lastName: msg.from.last_name || "No Last Name",  // الاسم الأخير
-    languageCode: msg.from.language_code || "en",  // اللغة
-    // photo: msg.from.photo ? msg.from.photo.file_id : null,  // صورة الملف الشخصي (إذا كانت موجودة)
-    bio: msg.from.bio || "No Bio",  // السيرة الذاتية
-    phoneNumber: msg.contact ? msg.contact.phone_number : null,  // رقم الهاتف (إذا شاركه المستخدم)
-    isBot: msg.from.is_bot,  // إذا كان المستخدم بوت
-    chatId: msg.chat.id,  // معرّف المحادثة
-  };
+    const userData = {
+        telegramId: msg.from.id,
+        username: msg.from.username || "No Username",
+        firstName: msg.from.first_name || "No First Name",
+        lastName: msg.from.last_name || "No Last Name",
+        languageCode: msg.from.language_code || "en",
+        bio: msg.from.bio || "No Bio",
+        phoneNumber: msg.contact ? msg.contact.phone_number : null,
+        isBot: msg.from.is_bot,
+        chatId: msg.chat.id,
+    };
 
     try {
         let user = await User.findOne({ telegramId: msg.from.id });
@@ -238,7 +229,7 @@ async function sendBroadcastMessage(message, adminChatId) {
     try {
         // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
         const users = await User.find({});
-        
+
         // إرسال الرسالة لكل مستخدم
         for (const user of users) {
             try {
