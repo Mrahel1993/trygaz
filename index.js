@@ -1,4 +1,4 @@
-// هذا البوت كامل وجاهز دون اخطاء
+// تحسبن 1 هذا البوت كامل وجاهز دون اخطاء
 const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
 const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z-AxaCbwopEx_zZU';
 
 // إنشاء البوت
-const bot = new TelegramBot(token, { polling: false  });
+const bot = new TelegramBot(token, { polling: false });
 
 const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
 bot.setWebHook(`${webhookUrl}/bot${token}`);
@@ -36,26 +36,25 @@ let adminState = {}; // لتتبع حالة المسؤولين أثناء إرس
 // اتصال MongoDB Atlas
 const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDBtrygaz?retryWrites=true&w=majority';
 mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 30000, // 30 ثانية
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 30000, // 30 ثانية
 })
-.then(() => console.log('Connected to MongoDB Atlas'))
-.catch(err => console.error('MongoDB connection error:', err));
+    .then(() => console.log('Connected to MongoDB Atlas'))
+    .catch(err => console.error('MongoDB connection error:', err));
 
 // تعريف مخطط المستخدمين في MongoDB
 const userSchema = new mongoose.Schema({
-  telegramId: { type: Number, required: true, unique: true },
-  username: String,
-  firstName: String,
-  lastName: String,
-  languageCode: String, // اللغة التي يستخدمها المستخدم
-  // photo: String, // صورة الملف الشخصي (إذا كانت موجودة)
-  bio: String, // السيرة الذاتية (إذا كانت موجودة)
-  phoneNumber: String, // رقم الهاتف (إذا شاركه المستخدم)
-  isBot: Boolean, // هل المستخدم هو بوت أو شخص حقيقي
-  chatId: Number, // معرّف المحادثة
-  joinedAt: { type: Date, default: Date.now }, // تاريخ الانضمام
+    telegramId: { type: Number, required: true, unique: true },
+    username: String,
+    firstName: String,
+    lastName: String,
+    languageCode: String,
+    bio: String,
+    phoneNumber: String,
+    isBot: Boolean,
+    chatId: Number,
+    joinedAt: { type: Date, default: Date.now },
 });
 
 const User = mongoose.model('User', userSchema);
