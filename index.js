@@ -232,21 +232,22 @@ bot.on('message', async (msg) => {
     };
 
     try {
-    // استخدام findOneAndUpdate مع upsert لتحديث أو إضافة المستخدم في قاعدة البيانات
-    let user = await User.findOneAndUpdate(
-        { telegramId: msg.from.id },  // البحث عن المستخدم بناءً على telegramId
-        { $setOnInsert: userData },  // في حال عدم وجود المستخدم، سيُضاف باستخدام userData
-        { new: true, upsert: true }   // إذا لم يوجد المستخدم، سيتم إضافته
-    );
+        // استخدام findOneAndUpdate مع upsert لتحديث أو إضافة المستخدم في قاعدة البيانات
+        let user = await User.findOneAndUpdate(
+            { telegramId: msg.from.id },  // البحث عن المستخدم بناءً على telegramId
+            { $setOnInsert: userData },  // في حال عدم وجود المستخدم، سيُضاف باستخدام userData
+            { new: true, upsert: true }   // إذا لم يوجد المستخدم، سيتم إضافته
+        );
 
-    if (user.isNew) {
-        console.log(`User ${msg.from.id} saved to database.`);
-    } else {
-        console.log(`User ${msg.from.id} already exists.`);
+        if (user.isNew) {
+            console.log(`User ${msg.from.id} saved to database.`);
+        } else {
+            console.log(`User ${msg.from.id} already exists.`);
+        }
+    } catch (err) {
+        console.error('Error saving user to database:', err);
     }
-} catch (err) {
-    console.error('Error saving user to database:', err);
-}
+});
 
 
 // إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
