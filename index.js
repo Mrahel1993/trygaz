@@ -1,10 +1,14 @@
 // محسن 2
-const TelegramBot = require('node-telegram-bot-api');
-const ExcelJS = require('exceljs');
-const express = require('express');
-const mongoose = require('mongoose');
-import pMap from 'p-map';  // لتحسين الأداء عند الإرسال الجماعي
-require('dotenv').config();
+import TelegramBot from 'node-telegram-bot-api';
+import ExcelJS from 'exceljs';
+import express from 'express';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import pMap from 'p-map';
+import fs from 'fs';
+
+// تحميل المتغيرات من ملف .env
+dotenv.config();
 
 // إعداد السيرفر Express
 const app = express();
@@ -82,7 +86,7 @@ async function loadDataFromExcelFiles(filePaths) {
             await workbook.xlsx.readFile(filePath);
             const worksheet = workbook.worksheets[0];
 
-            const fileStats = require('fs').statSync(filePath);
+            const fileStats = fs.statSync(filePath);
             const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
 
             worksheet.eachRow((row) => {
@@ -131,7 +135,7 @@ bot.onText(/\/start/, (msg) => {
     const options = {
         reply_markup: {
             keyboard: [
-                [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
+                [{ text: "🔍 البحث برقم الهوية أو الاسم" }], 
                 [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
             ],
             resize_keyboard: true,
@@ -164,18 +168,14 @@ bot.on('message', async (msg) => {
     if (input === "🔍 البحث برقم الهوية أو الاسم") {
         bot.sendMessage(chatId, "📝 أدخل رقم الهوية أو الاسم للبحث:");
     } else if (input === "📞 معلومات الاتصال") {
-        const contactMessage = `
-📞 **معلومات الاتصال:**
+        const contactMessage = `📞 **معلومات الاتصال:**
 للمزيد من الدعم أو الاستفسار
-💬 تلجرام: [https://t.me/AhmedGarqoud]
-        `;
+💬 تلجرام: [https://t.me/AhmedGarqoud]`;
         bot.sendMessage(chatId, contactMessage, { parse_mode: 'Markdown' });
     } else if (input === "📖 معلومات عن البوت") {
-        const aboutMessage = `
-🤖 **معلومات عن البوت:**
+        const aboutMessage = `🤖 **معلومات عن البوت:**
 هذا البوت يتيح البحث عن اسمك في كشوفات الغاز.
-🔧 **التطوير والصيانة**: [احمد محمد].
-        `;
+🔧 **التطوير والصيانة**: [احمد محمد].`;
         bot.sendMessage(chatId, aboutMessage, { parse_mode: 'Markdown' });
     } else if (input === "📢 إرسال رسالة للجميع" && adminIds.includes(chatId.toString())) {
         adminState[chatId] = 'awaiting_broadcast_message';
@@ -187,15 +187,13 @@ bot.on('message', async (msg) => {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
         if (user) {
-            const response = `
-🔍 **تفاصيل الطلب:**
+            const response = `🔍 **تفاصيل الطلب:**
 👤 **الاسم**: ${user.name}
 🏘️ **الحي / المنطقة**: ${user.area}
 🏙️ **المدينة**: ${user.district}
 📍 **المحافظة**: ${user.province}
 📜 **الحالة**: ${user.status}
-📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
-            `;
+📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")`;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
             bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
