@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
 const mongoose = require('mongoose');
-const pMap = require('p-map'); // لتحسين الأداء عند الإرسال الجماعي
+import pMap from 'p-map';  // لتحسين الأداء عند الإرسال الجماعي
 require('dotenv').config();
 
 // إعداد السيرفر Express
