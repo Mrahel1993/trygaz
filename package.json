@@ -19,5 +19,6 @@
     "unzipper": "^0.10.11"
   },
   "author": "BurijKing",
-  "license": "ISC"
+  "license": "ISC" ,
+  "type": "module"
 }
