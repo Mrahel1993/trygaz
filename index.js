@@ -238,21 +238,20 @@ bot.on('message', async (msg) => {
     );
 });
 
-// إرسال رسالة جماعية
+// إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
 async function sendBroadcastMessage(message, adminChatId) {
     try {
+        // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
         const users = await User.find({});
-        await pMap(users, async (user) => {
+        
+        // إرسال الرسالة لكل مستخدم
+        for (const user of users) {
             try {
                 await bot.sendMessage(user.telegramId, message);
             } catch (err) {
-                if (user && user.telegramId) {
-    console.warn(`🚫 المستخدم ${user.telegramId} حظر البوت.`);
-} else {
-    console.warn('🚫 المستخدم غير موجود أو لا يحتوي على telegramId.');
-}
+                console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
             }
-        }, { concurrency: 5 });
+        }
 
         bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة لجميع المستخدمين بنجاح.");
     } catch (err) {
