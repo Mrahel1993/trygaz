@@ -246,11 +246,11 @@ async function sendBroadcastMessage(message, adminChatId) {
             try {
                 await bot.sendMessage(user.telegramId, message);
             } catch (err) {
-                if (err.response && err.response.statusCode === 403) {
-                    console.warn(`🚫 المستخدم ${user.telegramId} حظر البوت.`);
-                } else {
-                    console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
-                }
+                if (user && user.telegramId) {
+    console.warn(`🚫 المستخدم ${user.telegramId} حظر البوت.`);
+} else {
+    console.warn('🚫 المستخدم غير موجود أو لا يحتوي على telegramId.');
+}
             }
         }, { concurrency: 5 });
 
