@@ -1,4 +1,4 @@
-// تحسبن 1 هذا البوت كامل وجاهز دون اخطاء
+// هذا البوت كامل وجاهز دون اخطاء
 const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
 const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z-AxaCbwopEx_zZU';
 
 // إنشاء البوت
-const bot = new TelegramBot(token, { polling: false });
+const bot = new TelegramBot(token, { polling: false  });
 
 const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
 bot.setWebHook(`${webhookUrl}/bot${token}`);
@@ -36,25 +36,25 @@ let adminState = {}; // لتتبع حالة المسؤولين أثناء إرس
 // اتصال MongoDB Atlas
 const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDBtrygaz?retryWrites=true&w=majority';
 mongoose.connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 30000, // 30 ثانية
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 })
-    .then(() => console.log('Connected to MongoDB Atlas'))
-    .catch(err => console.error('MongoDB connection error:', err));
+.then(() => console.log('Connected to MongoDB Atlas'))
+.catch(err => console.error('MongoDB connection error:', err));
 
 // تعريف مخطط المستخدمين في MongoDB
 const userSchema = new mongoose.Schema({
-    telegramId: { type: Number, required: true, unique: true },
-    username: String,
-    firstName: String,
-    lastName: String,
-    languageCode: String,
-    bio: String,
-    phoneNumber: String,
-    isBot: Boolean,
-    chatId: Number,
-    joinedAt: { type: Date, default: Date.now },
+  telegramId: { type: Number, required: true, unique: true },
+  username: String,
+  firstName: String,
+  lastName: String,
+  languageCode: String, // اللغة التي يستخدمها المستخدم
+  // photo: String, // صورة الملف الشخصي (إذا كانت موجودة)
+  bio: String, // السيرة الذاتية (إذا كانت موجودة)
+  phoneNumber: String, // رقم الهاتف (إذا شاركه المستخدم)
+  isBot: Boolean, // هل المستخدم هو بوت أو شخص حقيقي
+  chatId: Number, // معرّف المحادثة
+  joinedAt: { type: Date, default: Date.now }, // تاريخ الانضمام
 });
 
 const User = mongoose.model('User', userSchema);
@@ -186,11 +186,11 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
+📅 **تاريخ صدور الكشف**: ("21 /12/ 2024")
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   28 /12/ 2024");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   21 /12/ 2024");
         }
     }
 
@@ -208,22 +208,18 @@ bot.on('message', async (msg) => {
     chatId: msg.chat.id,  // معرّف المحادثة
   };
 
-     try {
-    // استخدام findOneAndUpdate مع upsert لتحديث أو إضافة المستخدم في قاعدة البيانات
-    let user = await User.findOneAndUpdate(
-        { telegramId: msg.from.id },  // البحث عن المستخدم بناءً على telegramId
-        { $setOnInsert: userData },  // في حال عدم وجود المستخدم، سيُضاف باستخدام userData
-        { new: true, upsert: true }   // إذا لم يوجد المستخدم، سيتم إضافته
-    );
-
-    if (user.isNew) {
-        console.log(`User ${msg.from.id} saved to database.`);
-    } else {
-        console.log(`User ${msg.from.id} already exists.`);
+    try {
+        let user = await User.findOne({ telegramId: msg.from.id });
+        if (!user) {
+            user = new User(userData);
+            await user.save();
+            console.log(`User ${msg.from.id} saved to database.`);
+        } else {
+            console.log(`User ${msg.from.id} already exists.`);
+        }
+    } catch (err) {
+        console.error('Error saving user to database:', err);
     }
-} catch (err) {
-    console.error('Error saving user to database:', err);
-}
 });
 
 // إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
