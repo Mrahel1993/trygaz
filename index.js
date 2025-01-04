@@ -45,6 +45,20 @@ mongoose.connect(mongoURI, {
 .then(() => console.log('Connected to MongoDB Atlas'))
 .catch(err => console.error('MongoDB connection error:', err));
 
+// إعادة الاتصال تلقائيًا في حال فقدان الاتصال
+mongoose.connection.on('disconnected', () => {
+    console.log('MongoDB connection lost. Reconnecting...');
+    mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+        .then(() => console.log('Reconnected to MongoDB Atlas'))
+        .catch(err => console.error('Failed to reconnect to MongoDB Atlas:', err));
+});
+
+// التعامل مع أخطاء الاتصال بشكل عام
+mongoose.connection.on('error', err => {
+    console.error('MongoDB connection error:', err);
+});
+
+
 // تعريف مخطط المستخدمين في MongoDB
 const userSchema = new mongoose.Schema({
   telegramId: { type: Number, required: true, unique: true },
