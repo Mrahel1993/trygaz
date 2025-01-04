@@ -232,6 +232,7 @@ bot.on('message', async (msg) => {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
         if (user) {
+            const safeFileName = user._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
             const response = `
 🔍 **تفاصيل الطلب:**
 
@@ -245,9 +246,9 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
-${`\n **اسم الملف**: ${user._fileName}\n `}
-**تاريخ آخر تعديل**: ${user.lastModifiedDate}  // إضافة تاريخ آخر تعديل هنا
+📅 **تاريخ صدور الكشف**: "28 /12/ 2024")
+\n **اسم الملف**: ${safeFileName}
+**تاريخ آخر تعديل**: ${user.lastModifiedDate}
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
