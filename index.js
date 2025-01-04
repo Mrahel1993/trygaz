@@ -16,12 +16,12 @@ app.get('/', (req, res) => {
 });
 
 // استبدال التوكن الخاص بك
-const token = process.env.TELEGRAM_BOT_TOKEN || '7857872067:AAGVzREaPkV6YIaa8WPegeWn_tk1fHDQRIo';
+const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z-AxaCbwopEx_zZU';
 
 // إنشاء البوت
 const bot = new TelegramBot(token, { polling: false  });
 
-const webhookUrl = process.env.WEBHOOK_URL || 'https://gaza-gaz-new-y1g2.onrender.com';
+const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
 bot.setWebHook(`${webhookUrl}/bot${token}`);
 
 app.post(`/bot${token}`, (req, res) => {
@@ -34,7 +34,7 @@ let data = [];
 let adminState = {}; // لتتبع حالة المسؤولين أثناء إرسال الرسائل
 
 // اتصال MongoDB Atlas
-const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDB?retryWrites=true&w=majority';
+const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDBtrygaz?retryWrites=true&w=majority';
 mongoose.connect(mongoURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
