@@ -261,23 +261,50 @@ bot.on('message', async (msg) => {
     }
 });
 
+// دالة لإعادة المحاولة عند حدوث خطأ مع تحديد عدد المحاولات
+async function retryOperation(operation, retries = 3, delay = 2000) {
+    let attempt = 0;
+    while (attempt < retries) {
+        try {
+            return await operation(); // تنفيذ العملية
+        } catch (error) {
+            attempt++;
+            console.error(`❌ محاولة ${attempt} فشلت:`, error.message);
+            if (attempt < retries) {
+                console.log(`⏳ إعادة المحاولة بعد ${delay / 1000} ثواني...`);
+                await new Promise(resolve => setTimeout(resolve, delay)); // الانتظار قبل المحاولة التالية
+            } else {
+                console.error('❌ تم استنفاد المحاولات.');
+                throw error; // إعادة رمي الخطأ بعد الاستنفاد
+            }
+        }
+    }
+}
+
 // إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
 async function sendBroadcastMessage(message, adminChatId) {
+    const failedUsers = [];  // لتخزين المستخدمين الذين فشل الإرسال إليهم
+
     try {
         // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
         const users = await User.find({});
         
-        // إرسال الرسالة لكل مستخدم
+        // إرسال الرسالة لكل مستخدم مع إعادة المحاولة في حال الفشل
         for (const user of users) {
             try {
-                await bot.sendMessage(user.telegramId, message);
+                await retryOperation(() => bot.sendMessage(user.telegramId, message), 3, 2000); // إعادة المحاولة 3 مرات
             } catch (err) {
                 console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
+                failedUsers.push(user.telegramId); // إضافة المستخدم إلى قائمة الفشل
             }
         }
 
         // تأكيد الإرسال للمسؤول
         bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة لجميع المستخدمين بنجاح.");
+         // إذا كان هناك مستخدمون فشل إرسال الرسالة إليهم
+        if (failedUsers.length > 0) {
+            bot.sendMessage(adminChatId, `❌ فشل إرسال الرسالة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`);
+        }
     } catch (err) {
         console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
         bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الرسالة للجميع.");
