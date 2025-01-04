@@ -245,12 +245,11 @@ bot.on('message', async (msg) => {
 📜 **الحالة**: ${user.status}
 📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
             `;
-           await sendMessageWithRetry(chatId, response);
+            bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            await sendMessageWithRetry(chatId, "❌ لم يتم العثور على أي بيانات تطابق إدخالك.");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   28 /12/ 2024");
         }
     }
-});
 
     // حفظ بيانات المستخدم في MongoDB
    const userData = {
