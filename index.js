@@ -98,7 +98,6 @@ async function loadDataFromExcelFolder(folderPath) {
                         distributorPhone: distributorPhone || "غير متوفر",
                         status: status || "غير متوفر",
                         deliveryDate: lastModifiedDate,
-                        fileName: fileName, // حفظ اسم الملف
                     });
                 }
             });
@@ -110,7 +109,6 @@ async function loadDataFromExcelFolder(folderPath) {
         console.error('❌ حدث خطأ أثناء قراءة ملفات Excel:', error.message);
     }
 }
-
 
 // استدعاء الدالة مع مسار المجلد
 const excelFolderPath = './excel-files'; // استبدل بمسار المجلد الخاص بك
@@ -179,12 +177,6 @@ bot.on('message', async (msg) => {
     } else {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
-        
-    function escapeMarkdown(text) {
-    return text.replace(/([_*[\]()~`>#+-=|{}.!\\])/g, '\\$1');
-}
-    
-        
         if (user) {
             const response = `
 🔍 **تفاصيل الطلب:**
@@ -199,8 +191,7 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-📅 **تاريخ صدور الكشف**: ${user.deliveryDate}
-📂 **ملف البيانات**: ${user.fileName}  // عرض اسم الملف
+📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
