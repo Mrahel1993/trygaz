@@ -95,9 +95,6 @@ async function loadDataFromExcelFolder(folderPath) {
             await workbook.xlsx.readFile(filePath);
             const worksheet = workbook.worksheets[0];
 
-            const fileStats = fs.statSync(filePath);
-            const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
-
             worksheet.eachRow((row) => {
                 const idNumber = row.getCell(1).value?.toString().trim();
                 const name = row.getCell(2).value?.toString().trim();
@@ -120,7 +117,7 @@ async function loadDataFromExcelFolder(folderPath) {
                         distributorName: distributorName || "غير متوفر",
                         distributorPhone: distributorPhone || "غير متوفر",
                         status: status || "غير متوفر",
-                        deliveryDate: lastModifiedDate,
+                        filePath: filePath // تخزين رابط الملف
                     });
                 }
             });
@@ -201,31 +198,6 @@ bot.on('message', async (msg) => {
 
     if (input === "🔍 البحث برقم الهوية أو الاسم") {
         bot.sendMessage(chatId, "📝 أدخل رقم الهوية أو الاسم للبحث:");
-    } else if (input === "📞 معلومات الاتصال") {
-        const contactMessage = `
-📞 **معلومات الاتصال:**
-للمزيد من الدعم أو الاستفسار
-في حال حدوث اي خلل
-يمكنك التواصل معنا عبر:
-💬 تلجرام: [https://t.me/AhmedGarqoud]
-        `;
-        bot.sendMessage(chatId, contactMessage, { parse_mode: 'Markdown' });
-    } else if (input === "📖 معلومات عن البوت") {
-        const aboutMessage = `
-🤖 **معلومات عن البوت:**
-هذا البوت يتيح لك البحث عن اسمك في كشوفات الغاز باستخدام رقم الهوية أو اسمك كما هو مسجل في كشوفات الغاز.
-- يتم عرض تفاصيل اسمك بما في ذلك بيانات الموزع وحالة طلبك.
-هدفنا هو تسهيل الوصول إلى بيانتات.
-هذا بوت مجهود شخصي ولا يتبع لاي جهة.
-🔧 **التطوير والصيانة**: تم تطوير هذا البوت بواسطة [احمد محمد].
-        `;
-        bot.sendMessage(chatId, aboutMessage, { parse_mode: 'Markdown' });
-    } else if (input === "📢 إرسال رسالة للجميع" && adminIds.includes(chatId.toString())) {
-        adminState[chatId] = 'awaiting_broadcast_message';
-        bot.sendMessage(chatId, "✉️ اكتب الرسالة التي تريد إرسالها لجميع المستخدمين، ثم اضغط على إرسال:");
-    } else if (adminState[chatId] === 'awaiting_broadcast_message') {
-        delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
-        await sendBroadcastMessage(input, chatId);
     } else {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
@@ -243,13 +215,15 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
+
+📂 **رابط الملف**: ${user.filePath}  // عرض رابط الملف
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   28 /12/ 2024");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
         }
     }
+});
 
     // حفظ بيانات المستخدم في MongoDB
    const userData = {
