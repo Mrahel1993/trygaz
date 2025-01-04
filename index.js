@@ -139,6 +139,47 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
 
+// دالة لإعادة المحاولة عند حدوث خطأ مع تحديد عدد المحاولات
+async function retryOperation(operation, retries = 3, delay = 2000) {
+    let attempt = 0;
+    while (attempt < retries) {
+        try {
+            return await operation(); // تنفيذ العملية
+        } catch (error) {
+            attempt++;
+            console.error(`❌ محاولة ${attempt} فشلت:`, error.message);
+            if (attempt < retries) {
+                console.log(`⏳ إعادة المحاولة بعد ${delay / 1000} ثواني...`);
+                await new Promise(resolve => setTimeout(resolve, delay)); // الانتظار قبل المحاولة التالية
+            } else {
+                console.error('❌ تم استنفاد المحاولات.');
+                // إعلام المسؤولين عند حدوث خطأ بعد جميع المحاولات
+                sendMessageToAdmins(`❌ حدث خطأ أثناء العملية: ${error.message}`);
+                throw error; // إعادة رمي الخطأ بعد الاستنفاد
+            }
+        }
+    }
+}
+
+// إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
+async function sendMessageWithRetry(chatId, message) {
+    await retryOperation(() => bot.sendMessage(chatId, message));
+}
+
+// حفظ بيانات المستخدم في MongoDB مع إعادة المحاولة عند حدوث خطأ
+async function saveUserWithRetry(userData) {
+    await retryOperation(async () => {
+        let user = await User.findOne({ telegramId: userData.telegramId });
+        if (!user) {
+            user = new User(userData);
+            await user.save();
+            console.log(`User ${userData.telegramId} saved to database.`);
+        } else {
+            console.log(`User ${userData.telegramId} already exists.`);
+        }
+    });
+}
+
 
 // التعامل مع الضغط على الأزرار والبحث
 bot.on('message', async (msg) => {
@@ -213,15 +254,8 @@ bot.on('message', async (msg) => {
     chatId: msg.chat.id,  // معرّف المحادثة
   };
 
-try {
-        let user = await User.findOne({ telegramId: msg.from.id });
-        if (!user) {
-            user = new User(userData);
-            await user.save();
-            console.log(`User ${msg.from.id} saved to database.`);
-        } else {
-            console.log(`User ${msg.from.id} already exists.`);
-        }
+ try {
+        await saveUserWithRetry(userData);
     } catch (err) {
         console.error('Error saving user to database:', err);
     }
