@@ -16,12 +16,12 @@ app.get('/', (req, res) => {
 });
 
 // استبدال التوكن الخاص بك
-const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z-AxaCbwopEx_zZU';
+const token = process.env.TELEGRAM_BOT_TOKEN || '7857872067:AAGVzREaPkV6YIaa8WPegeWn_tk1fHDQRIo';
 
 // إنشاء البوت
 const bot = new TelegramBot(token, { polling: false  });
 
-const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
+const webhookUrl = process.env.WEBHOOK_URL || 'https://gaza-gaz-new-y1g2.onrender.com';
 bot.setWebHook(`${webhookUrl}/bot${token}`);
 
 app.post(`/bot${token}`, (req, res) => {
@@ -34,10 +34,11 @@ let data = [];
 let adminState = {}; // لتتبع حالة المسؤولين أثناء إرسال الرسائل
 
 // اتصال MongoDB Atlas
-const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDBtrygaz?retryWrites=true&w=majority';
+const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDB?retryWrites=true&w=majority';
 mongoose.connect(mongoURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 30000, // 30 ثانية
 })
 .then(() => console.log('Connected to MongoDB Atlas'))
 .catch(err => console.error('MongoDB connection error:', err));
@@ -186,11 +187,11 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-📅 **تاريخ صدور الكشف**: ("21 /12/ 2024")
+📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   21 /12/ 2024");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   28 /12/ 2024");
         }
     }
 
@@ -208,7 +209,7 @@ bot.on('message', async (msg) => {
     chatId: msg.chat.id,  // معرّف المحادثة
   };
 
-    try {
+try {
         let user = await User.findOne({ telegramId: msg.from.id });
         if (!user) {
             user = new User(userData);
