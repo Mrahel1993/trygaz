@@ -75,6 +75,15 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+// دالة لتحسين التعامل مع البيانات المفقودة أو غير الصالحة
+const cleanData = (value) => {
+    if (value === null || value === undefined || value === "") {
+        return "غير متوفر"; // إرجاع "غير متوفر" إذا كانت القيمة مفقودة أو فارغة
+    }
+    return value.toString().trim() || "غير متوفر"; // تحويل القيمة إلى نص والتأكد من أنها ليست فارغة
+};
+
+
 // دالة لتحميل البيانات من جميع ملفات Excel في مجلد معين
 async function loadDataFromExcelFolder(folderPath) {
     data = [];
