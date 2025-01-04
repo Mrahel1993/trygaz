@@ -98,7 +98,6 @@ async function loadDataFromExcelFolder(folderPath) {
                         distributorPhone: distributorPhone || "غير متوفر",
                         status: status || "غير متوفر",
                         deliveryDate: lastModifiedDate,
-                        fileName, // إضافة اسم الملف هنا
                     });
                 }
             });
@@ -192,7 +191,7 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-📅 **اسم الملف**: ${user.fileName}
+📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
