@@ -259,7 +259,9 @@ bot.on('message', async (msg) => {
     }
 } else {
     bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
-}
+            }
+         }
+});
 
 
     // حفظ بيانات المستخدم في MongoDB
