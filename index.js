@@ -95,6 +95,9 @@ async function loadDataFromExcelFolder(folderPath) {
             await workbook.xlsx.readFile(filePath);
             const worksheet = workbook.worksheets[0];
 
+            const fileStats = fs.statSync(filePath);
+            const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
+
             worksheet.eachRow((row) => {
                 const idNumber = row.getCell(1).value?.toString().trim();
                 const name = row.getCell(2).value?.toString().trim();
@@ -117,7 +120,7 @@ async function loadDataFromExcelFolder(folderPath) {
                         distributorName: distributorName || "غير متوفر",
                         distributorPhone: distributorPhone || "غير متوفر",
                         status: status || "غير متوفر",
-                        filePath: filePath // تخزين رابط الملف
+                        deliveryDate: lastModifiedDate,
                     });
                 }
             });
@@ -127,17 +130,8 @@ async function loadDataFromExcelFolder(folderPath) {
         sendMessageToAdmins("📢 تم تحديث البيانات من جميع الملفات بنجاح! يمكنك الآن البحث في البيانات المحدثة.");
     } catch (error) {
         console.error('❌ حدث خطأ أثناء قراءة ملفات Excel:', error.message);
-        sendMessageToAdmins(`❌ حدث خطأ أثناء قراءة ملفات Excel: ${error.message}`);
     }
 }
-
-// تحسين Logging للأخطاء
-function logError(error, source = '') {
-    console.error(`❌ [${new Date().toISOString()}] ${source ? source + " - " : ""}${error.message}`);
-    sendMessageToAdmins(`❌ [${new Date().toISOString()}] ${source ? source + " - " : ""}${error.message}`);
-}
-
-
 
 // استدعاء الدالة مع مسار المجلد
 const excelFolderPath = './excel-files'; // استبدل بمسار المجلد الخاص بك
@@ -168,6 +162,27 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
 
+// دالة لإعادة المحاولة عند حدوث خطأ مع تحديد عدد المحاولات
+async function retryOperation(operation, retries = 3, delay = 2000) {
+    let attempt = 0;
+    while (attempt < retries) {
+        try {
+            return await operation(); // تنفيذ العملية
+        } catch (error) {
+            attempt++;
+            console.error(`❌ محاولة ${attempt} فشلت:`, error.message);
+            if (attempt < retries) {
+                console.log(`⏳ إعادة المحاولة بعد ${delay / 1000} ثواني...`);
+                await new Promise(resolve => setTimeout(resolve, delay)); // الانتظار قبل المحاولة التالية
+            } else {
+                console.error('❌ تم استنفاد المحاولات.');
+                // إعلام المسؤولين عند حدوث خطأ بعد جميع المحاولات
+                sendMessageToAdmins(`❌ حدث خطأ أثناء العملية: ${error.message}`);
+                throw error; // إعادة رمي الخطأ بعد الاستنفاد
+            }
+        }
+    }
+}
 
 // إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
 async function sendMessageWithRetry(chatId, message) {
@@ -198,6 +213,31 @@ bot.on('message', async (msg) => {
 
     if (input === "🔍 البحث برقم الهوية أو الاسم") {
         bot.sendMessage(chatId, "📝 أدخل رقم الهوية أو الاسم للبحث:");
+    } else if (input === "📞 معلومات الاتصال") {
+        const contactMessage = `
+📞 **معلومات الاتصال:**
+للمزيد من الدعم أو الاستفسار
+في حال حدوث اي خلل
+يمكنك التواصل معنا عبر:
+💬 تلجرام: [https://t.me/AhmedGarqoud]
+        `;
+        bot.sendMessage(chatId, contactMessage, { parse_mode: 'Markdown' });
+    } else if (input === "📖 معلومات عن البوت") {
+        const aboutMessage = `
+🤖 **معلومات عن البوت:**
+هذا البوت يتيح لك البحث عن اسمك في كشوفات الغاز باستخدام رقم الهوية أو اسمك كما هو مسجل في كشوفات الغاز.
+- يتم عرض تفاصيل اسمك بما في ذلك بيانات الموزع وحالة طلبك.
+هدفنا هو تسهيل الوصول إلى بيانتات.
+هذا بوت مجهود شخصي ولا يتبع لاي جهة.
+🔧 **التطوير والصيانة**: تم تطوير هذا البوت بواسطة [احمد محمد].
+        `;
+        bot.sendMessage(chatId, aboutMessage, { parse_mode: 'Markdown' });
+    } else if (input === "📢 إرسال رسالة للجميع" && adminIds.includes(chatId.toString())) {
+        adminState[chatId] = 'awaiting_broadcast_message';
+        bot.sendMessage(chatId, "✉️ اكتب الرسالة التي تريد إرسالها لجميع المستخدمين، ثم اضغط على إرسال:");
+    } else if (adminState[chatId] === 'awaiting_broadcast_message') {
+        delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
+        await sendBroadcastMessage(input, chatId);
     } else {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
@@ -215,15 +255,13 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-
-📂 **رابط الملف**: ${user.filePath}  // عرض رابط الملف
+📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   28 /12/ 2024");
         }
     }
-
 
     // حفظ بيانات المستخدم في MongoDB
    const userData = {
@@ -246,26 +284,25 @@ bot.on('message', async (msg) => {
     }
 });
 
-async function retryOperation(operation, retries = 3, delay = 2000, operationName = 'عملية') {
+// دالة لإعادة المحاولة عند حدوث خطأ مع تحديد عدد المحاولات
+async function retryOperation(operation, retries = 3, delay = 2000) {
     let attempt = 0;
     while (attempt < retries) {
         try {
             return await operation(); // تنفيذ العملية
         } catch (error) {
             attempt++;
-            logError(error, `${operationName} - محاولة ${attempt}`);
+            console.error(`❌ محاولة ${attempt} فشلت:`, error.message);
             if (attempt < retries) {
                 console.log(`⏳ إعادة المحاولة بعد ${delay / 1000} ثواني...`);
                 await new Promise(resolve => setTimeout(resolve, delay)); // الانتظار قبل المحاولة التالية
             } else {
                 console.error('❌ تم استنفاد المحاولات.');
-                sendMessageToAdmins(`❌ حدث خطأ أثناء ${operationName}: ${error.message}`);
                 throw error; // إعادة رمي الخطأ بعد الاستنفاد
             }
         }
     }
 }
-
 
 // إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
 async function sendBroadcastMessage(message, adminChatId) {
