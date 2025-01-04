@@ -256,7 +256,7 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-**اسم الملف**: ${user._fileName}  // إضافة اسم الملف هنا   📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
+**اسم الملف**: ${user._fileName}
 
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
