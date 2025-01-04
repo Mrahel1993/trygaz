@@ -229,30 +229,38 @@ bot.on('message', async (msg) => {
         delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
         await sendBroadcastMessage(input, chatId);
     } else {
-        const user = data.find((entry) => entry.idNumber === input || entry.name === input);
+       // البحث عن جميع السجلات التي تطابق الإدخال
+        const matchingRecords = data.filter((entry) => 
+            entry.idNumber === input || entry.name.includes(input)
+        );
 
-        if (user) {
-            const safeFileName = user._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
-            const response = `
-🔍 **تفاصيل الطلب:**
+        
+             if (matchingRecords.length > 0) {
+            let response = `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**\n\n`;
 
-👤 **الاسم**: ${user.name}
-🏘️ **الحي / المنطقة**: ${user.area}
-🏙️ **المدينة**: ${user.district}
-📍 **المحافظة**: ${user.province}
+            matchingRecords.forEach((record, index) => {
+                const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
+                response += `
+📄 **نتيجة ${index + 1}:**
+👤 **الاسم**: ${record.name}
+🏘️ **الحي / المنطقة**: ${record.area}
+🏙️ **المدينة**: ${record.district}
+📍 **المحافظة**: ${record.province}
 
-📛 **اسم الموزع**: ${user.distributorName}
-📞 **رقم جوال الموزع**: ${user.distributorPhone}
-🆔 **هوية الموزع**: ${user.distributorId}
+📛 **اسم الموزع**: ${record.distributorName}
+📞 **رقم جوال الموزع**: ${record.distributorPhone}
+🆔 **هوية الموزع**: ${record.distributorId}
 
-📜 **الحالة**: ${user.status}
+📜 **الحالة**: ${record.status}
+📂 **اسم الملف**: ${safeFileName}
+📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}
 
-\n **اسم الملف**: ${safeFileName}
+                `;
+            });
 
-            `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   28 /12/ 2024");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
         }
     }
 
