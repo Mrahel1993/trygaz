@@ -179,6 +179,12 @@ bot.on('message', async (msg) => {
     } else {
         const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
+        
+    function escapeMarkdown(text) {
+    return text.replace(/([_*[\]()~`>#+-=|{}.!\\])/g, '\\$1');
+}
+    
+        
         if (user) {
             const response = `
 🔍 **تفاصيل الطلب:**
