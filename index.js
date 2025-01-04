@@ -122,6 +122,7 @@ async function loadDataFromExcelFolder(folderPath) {
                         status: status || "غير متوفر",
                         deliveryDate: lastModifiedDate,
                         _fileName: fileName,  // إضافة اسم الملف
+                        lastModifiedDate: lastModifiedDate,  // إضافة تاريخ آخر تعديل
                     });
                 }
             });
@@ -131,8 +132,17 @@ async function loadDataFromExcelFolder(folderPath) {
         sendMessageToAdmins("📢 تم تحديث البيانات من جميع الملفات بنجاح! يمكنك الآن البحث في البيانات المحدثة.");
     } catch (error) {
         console.error('❌ حدث خطأ أثناء قراءة ملفات Excel:', error.message);
+        sendMessageToAdmins(`❌ حدث خطأ أثناء قراءة ملفات Excel: ${error.message}`);
     }
 }
+
+// تحسين Logging للأخطاء
+function logError(error, source = '') {
+    console.error(`❌ [${new Date().toISOString()}] ${source ? source + " - " : ""}${error.message}`);
+    sendMessageToAdmins(`❌ [${new Date().toISOString()}] ${source ? source + " - " : ""}${error.message}`);
+}
+
+
 
 // استدعاء الدالة مع مسار المجلد
 const excelFolderPath = './excel-files'; // استبدل بمسار المجلد الخاص بك
@@ -163,27 +173,6 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
 
-// دالة لإعادة المحاولة عند حدوث خطأ مع تحديد عدد المحاولات
-async function retryOperation(operation, retries = 3, delay = 2000) {
-    let attempt = 0;
-    while (attempt < retries) {
-        try {
-            return await operation(); // تنفيذ العملية
-        } catch (error) {
-            attempt++;
-            console.error(`❌ محاولة ${attempt} فشلت:`, error.message);
-            if (attempt < retries) {
-                console.log(`⏳ إعادة المحاولة بعد ${delay / 1000} ثواني...`);
-                await new Promise(resolve => setTimeout(resolve, delay)); // الانتظار قبل المحاولة التالية
-            } else {
-                console.error('❌ تم استنفاد المحاولات.');
-                // إعلام المسؤولين عند حدوث خطأ بعد جميع المحاولات
-                sendMessageToAdmins(`❌ حدث خطأ أثناء العملية: ${error.message}`);
-                throw error; // إعادة رمي الخطأ بعد الاستنفاد
-            }
-        }
-    }
-}
 
 // إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
 async function sendMessageWithRetry(chatId, message) {
@@ -256,8 +245,9 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-**اسم الملف**: ${user._fileName}
-
+📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
+${`\n **اسم الملف**: ${user._fileName}\n `}
+**تاريخ آخر تعديل**: ${user.lastModifiedDate}  // إضافة تاريخ آخر تعديل هنا
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
@@ -286,25 +276,26 @@ bot.on('message', async (msg) => {
     }
 });
 
-// دالة لإعادة المحاولة عند حدوث خطأ مع تحديد عدد المحاولات
-async function retryOperation(operation, retries = 3, delay = 2000) {
+async function retryOperation(operation, retries = 3, delay = 2000, operationName = 'عملية') {
     let attempt = 0;
     while (attempt < retries) {
         try {
             return await operation(); // تنفيذ العملية
         } catch (error) {
             attempt++;
-            console.error(`❌ محاولة ${attempt} فشلت:`, error.message);
+            logError(error, `${operationName} - محاولة ${attempt}`);
             if (attempt < retries) {
                 console.log(`⏳ إعادة المحاولة بعد ${delay / 1000} ثواني...`);
                 await new Promise(resolve => setTimeout(resolve, delay)); // الانتظار قبل المحاولة التالية
             } else {
                 console.error('❌ تم استنفاد المحاولات.');
+                sendMessageToAdmins(`❌ حدث خطأ أثناء ${operationName}: ${error.message}`);
                 throw error; // إعادة رمي الخطأ بعد الاستنفاد
             }
         }
     }
 }
+
 
 // إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
 async function sendBroadcastMessage(message, adminChatId) {
