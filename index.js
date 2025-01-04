@@ -98,6 +98,7 @@ async function loadDataFromExcelFolder(folderPath) {
                         distributorPhone: distributorPhone || "غير متوفر",
                         status: status || "غير متوفر",
                         deliveryDate: lastModifiedDate,
+                        fileName, // إضافة اسم الملف هنا
                     });
                 }
             });
