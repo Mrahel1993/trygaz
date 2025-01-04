@@ -15,10 +15,8 @@
     "rimraf": "^4.0.0",
     "request-promise-core": "^1.1.4",
     "mongoose": "^7.0.0",
-     "p-map": "^5.0.0" ,
     "unzipper": "^0.10.11"
   },
   "author": "BurijKing",
-  "license": "ISC" ,
-  "type": "module"
+  "license": "ISC"
 }
