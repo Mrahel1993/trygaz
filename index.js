@@ -3,13 +3,15 @@ const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 // إعداد السيرفر Express
 const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(express.json()); // لتلقي الطلبات بتنسيق JSON
+app.use(express.json());
 
 app.get('/', (req, res) => {
     res.send('The server is running successfully.');
@@ -19,7 +21,7 @@ app.get('/', (req, res) => {
 const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z-AxaCbwopEx_zZU';
 
 // إنشاء البوت
-const bot = new TelegramBot(token, { polling: false  });
+const bot = new TelegramBot(token, { polling: false });
 
 const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
 bot.setWebHook(`${webhookUrl}/bot${token}`);
@@ -50,7 +52,6 @@ const userSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
   languageCode: String, // اللغة التي يستخدمها المستخدم
-  // photo: String, // صورة الملف الشخصي (إذا كانت موجودة)
   bio: String, // السيرة الذاتية (إذا كانت موجودة)
   phoneNumber: String, // رقم الهاتف (إذا شاركه المستخدم)
   isBot: Boolean, // هل المستخدم هو بوت أو شخص حقيقي
@@ -60,16 +61,18 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// دالة لتحميل البيانات من ملفات Excel
-async function loadDataFromExcelFiles(filePaths) {
+// دالة لتحميل البيانات من جميع ملفات Excel في مجلد معين
+async function loadDataFromExcelFolder(folderPath) {
     data = [];
     try {
-        for (const filePath of filePaths) {
+        const fileNames = fs.readdirSync(folderPath).filter(file => file.endsWith('.xlsx'));
+        for (const fileName of fileNames) {
+            const filePath = path.join(folderPath, fileName);
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.readFile(filePath);
             const worksheet = workbook.worksheets[0];
 
-            const fileStats = require('fs').statSync(filePath);
+            const fileStats = fs.statSync(filePath);
             const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
 
             worksheet.eachRow((row) => {
@@ -107,9 +110,9 @@ async function loadDataFromExcelFiles(filePaths) {
     }
 }
 
-// استدعاء الدالة مع ملفات متعددة
-const excelFiles = ['b.xlsx', 'k.xlsx', 'r.xlsx']; // استبدل بأسماء ملفاتك
-loadDataFromExcelFiles(excelFiles);
+// استدعاء الدالة مع مسار المجلد
+const excelFolderPath = './excel-files'; // استبدل بمسار المجلد الخاص بك
+loadDataFromExcelFolder(excelFolderPath);
 
 // قائمة معرفات المسؤولين
 const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
@@ -135,6 +138,7 @@ bot.onText(/\/start/, (msg) => {
 
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
+
 
 // التعامل مع الضغط على الأزرار والبحث
 bot.on('message', async (msg) => {
