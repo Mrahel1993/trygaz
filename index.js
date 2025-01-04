@@ -191,7 +191,7 @@ bot.on('message', async (msg) => {
 🆔 **هوية الموزع**: ${user.distributorId}
 
 📜 **الحالة**: ${user.status}
-📅 **تاريخ صدور الكشف**: ("28 /12/ 2024")
+📅 **اسم الملف**: ${user.fileName}
             `;
             bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
