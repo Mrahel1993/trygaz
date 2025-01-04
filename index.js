@@ -1,4 +1,3 @@
-// هذا البوت كامل وجاهز دون اخطاء
 const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
@@ -83,7 +82,6 @@ const cleanData = (value) => {
     return value.toString().trim() || "غير متوفر"; // تحويل القيمة إلى نص والتأكد من أنها ليست فارغة
 };
 
-
 // دالة لتحميل البيانات من جميع ملفات Excel في مجلد معين
 async function loadDataFromExcelFolder(folderPath) {
     data = [];
@@ -143,7 +141,6 @@ function logError(error, source = '') {
 }
 
 
-
 // استدعاء الدالة مع مسار المجلد
 const excelFolderPath = './excel-files'; // استبدل بمسار المجلد الخاص بك
 loadDataFromExcelFolder(excelFolderPath);
@@ -193,7 +190,6 @@ async function saveUserWithRetry(userData) {
     });
 }
 
-
 // التعامل مع الضغط على الأزرار والبحث
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
@@ -229,18 +225,17 @@ bot.on('message', async (msg) => {
         delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
         await sendBroadcastMessage(input, chatId);
     } else {
-       // البحث عن جميع السجلات التي تطابق الإدخال
+        // البحث عن جميع السجلات التي تطابق الإدخال
         const matchingRecords = data.filter((entry) => 
             entry.idNumber === input || entry.name.includes(input)
         );
 
-        
-         if (matchingRecords.length > 0) {
-    bot.sendMessage(chatId, `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**`);
+        if (matchingRecords.length > 0) {
+            bot.sendMessage(chatId, `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**`);
 
-    for (const record of matchingRecords) {
-        const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
-        const response = `
+            for (const record of matchingRecords) {
+                const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
+                const response = `
 👤 **الاسم**: ${record.name}
 🏘️ **الحي / المنطقة**: ${record.area}
 🏙️ **المدينة**: ${record.district}
@@ -253,97 +248,49 @@ bot.on('message', async (msg) => {
 📜 **الحالة**: ${record.status}
 📂 **اسم الملف**: ${safeFileName}
 📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}
-        `;
-
-        bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
-    }
-} else {
-    bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
+                `;
+                bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
             }
-         }
-});
-
+        } else {
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
+        }
+    }
 
     // حفظ بيانات المستخدم في MongoDB
-   const userData = {
-    telegramId: msg.from.id,
-    username: msg.from.username || "No Username",  // اسم المستخدم
-    firstName: msg.from.first_name || "No First Name",  // الاسم الأول
-    lastName: msg.from.last_name || "No Last Name",  // الاسم الأخير
-    languageCode: msg.from.language_code || "en",  // اللغة
-    // photo: msg.from.photo ? msg.from.photo.file_id : null,  // صورة الملف الشخصي (إذا كانت موجودة)
-    bio: msg.from.bio || "No Bio",  // السيرة الذاتية
-    phoneNumber: msg.contact ? msg.contact.phone_number : null,  // رقم الهاتف (إذا شاركه المستخدم)
-    isBot: msg.from.is_bot,  // إذا كان المستخدم بوت
-    chatId: msg.chat.id,  // معرّف المحادثة
-  };
+    const userData = {
+        telegramId: msg.from.id,
+        username: msg.from.username || "No Username",  // اسم المستخدم
+        firstName: msg.from.first_name || "No First Name",  // الاسم الأول
+        lastName: msg.from.last_name || "No Last Name",  // الاسم الأخير
+        languageCode: msg.from.language_code || "en",  // اللغة
+        bio: msg.from.bio || "No Bio",  // السيرة الذاتية
+        phoneNumber: msg.contact ? msg.contact.phone_number : null,  // رقم الهاتف (إذا شاركه المستخدم)
+        isBot: msg.from.is_bot,  // هل هو بوت أم شخص
+        chatId: msg.chat.id  // معرّف المحادثة
+    };
 
- try {
-        await saveUserWithRetry(userData);
-    } catch (err) {
-        console.error('Error saving user to database:', err);
-    }
+    saveUserWithRetry(userData);
 });
 
-async function retryOperation(operation, retries = 3, delay = 2000, operationName = 'عملية') {
-    let attempt = 0;
-    while (attempt < retries) {
+// إعادة المحاولة عند حدوث أخطاء
+async function retryOperation(operation, retries = 5, delay = 1000) {
+    for (let attempt = 0; attempt < retries; attempt++) {
         try {
-            return await operation(); // تنفيذ العملية
+            await operation();
+            return; // إذا تمت العملية بنجاح، نخرج من الدالة
         } catch (error) {
-            attempt++;
-            logError(error, `${operationName} - محاولة ${attempt}`);
-            if (attempt < retries) {
-                console.log(`⏳ إعادة المحاولة بعد ${delay / 1000} ثواني...`);
+            if (attempt < retries - 1) {
+                console.log(`❌ محاولة فاشلة ${attempt + 1}. إعادة المحاولة بعد ${delay / 1000} ثانية...`);
                 await new Promise(resolve => setTimeout(resolve, delay)); // الانتظار قبل المحاولة التالية
             } else {
-                console.error('❌ تم استنفاد المحاولات.');
-                sendMessageToAdmins(`❌ حدث خطأ أثناء ${operationName}: ${error.message}`);
-                throw error; // إعادة رمي الخطأ بعد الاستنفاد
+                console.log('❌ فشل العملية بعد عدة محاولات:', error.message);
+                throw error;  // إذا فشلت جميع المحاولات، نرمي الخطأ
             }
         }
     }
 }
 
 
-// إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
-async function sendBroadcastMessage(message, adminChatId) {
-    const failedUsers = [];  // لتخزين المستخدمين الذين فشل الإرسال إليهم
-
-    try {
-        // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
-        const users = await User.find({});
-        
-        // إرسال الرسالة لكل مستخدم مع إعادة المحاولة في حال الفشل
-        for (const user of users) {
-            try {
-                await retryOperation(() => bot.sendMessage(user.telegramId, message), 3, 2000); // إعادة المحاولة 3 مرات
-            } catch (err) {
-                console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
-                failedUsers.push(user.telegramId); // إضافة المستخدم إلى قائمة الفشل
-            }
-        }
-
-        // تأكيد الإرسال للمسؤول
-        bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة لجميع المستخدمين بنجاح.");
-         // إذا كان هناك مستخدمون فشل إرسال الرسالة إليهم
-        if (failedUsers.length > 0) {
-            bot.sendMessage(adminChatId, `❌ فشل إرسال الرسالة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`);
-        }
-    } catch (err) {
-        console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
-        bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الرسالة للجميع.");
-    }
-}
-
-// إرسال تنبيه للمسؤولين
-function sendMessageToAdmins(message) {
-    adminIds.forEach(adminId => {
-        bot.sendMessage(adminId, message);
-    });
-}
-
-// تشغيل السيرفر
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`Server running on port ${port}`);
 });
