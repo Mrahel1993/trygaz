@@ -256,9 +256,10 @@ bot.on('message', async (msg) => {
 📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}
 
                 `;
+                // إرسال كل نتيجة في رسالة منفصلة
+        await bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown' });
             });
 
-            bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
             bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
         }
