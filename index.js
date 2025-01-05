@@ -268,12 +268,13 @@ bot.on('message', async (msg) => {
 
                 `;
             });
-
-            bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
-        } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
         }
-    }
+
+if (response) {
+    bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+} else {
+    bot.sendMessage(chatId, `❌ لا توجد نتائج تطابق المدخل "${input}"`);
+}
 
     // حفظ بيانات المستخدم في MongoDB
    const userData = {
