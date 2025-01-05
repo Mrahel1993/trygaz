@@ -253,9 +253,9 @@ bot.on('message', async (msg) => {
 📂 **اسم الملف**: ${safeFileName}
 📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}`;
 
-               bot.sendMessage(chatId, response, { parse_mode: 'Markdown' }); 
+               
             });
-
+    bot.sendMessage(chatId, response, { parse_mode: 'Markdown' }); 
             
         } else {
             bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
