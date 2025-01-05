@@ -1,4 +1,4 @@
-// هذا البوت كامل وجاهز دون اخطاء
+// هذا البوت كامل وجاهز دون اخطاء مع ظهورالنتائج منفصلة ومن اكثر من ملف
 const TelegramBot = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
