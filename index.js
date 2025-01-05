@@ -236,11 +236,9 @@ bot.on('message', async (msg) => {
 
         
              if (matchingRecords.length > 0) {
-            let response = `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**\n\n`;
-
-            matchingRecords.forEach((record, index) => {
+            matchingRecords.forEach(async (record, index) => {
                 const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
-                response += `
+                const resultMessage = `
 📄 **نتيجة ${index + 1}:**
 👤 **الاسم**: ${record.name}
 🏘️ **الحي / المنطقة**: ${record.area}
