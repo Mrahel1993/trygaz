@@ -148,6 +148,17 @@ loadDataFromExcelFolder(excelFolderPath);
 // قائمة معرفات المسؤولين
 const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
+// دالة لإرسال رسالة إلى جميع المسؤولين
+async function sendMessageToAdmins(message) {
+    for (const adminId of adminIds) {
+        try {
+            await bot.sendMessage(adminId, message);
+        } catch (error) {
+            console.error(`❌ فشل إرسال الرسالة إلى المسؤول ${adminId}:`, error.message);
+        }
+    }
+}
+
 // الرد على أوامر البوت
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
