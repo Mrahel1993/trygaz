@@ -235,22 +235,11 @@ bot.on('message', async (msg) => {
         );
 
         
-              if (matchingRecords.length > 0) {
+             if (matchingRecords.length > 0) {
             let response = `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**\n\n`;
 
-            // تقسيم النتائج حسب الملف
-            const resultsByFile = matchingRecords.reduce((acc, record) => {
-                if (!acc[record._fileName]) {
-                    acc[record._fileName] = [];
-                }
-                acc[record._fileName].push(record);
-                return acc;
-            }, {});
-
-            // عرض النتائج من كل ملف Excel
-            for (const [fileName, records] of Object.entries(resultsByFile)) {
-                response += `📂 **النتائج من الملف: ${fileName}:**\n\n`;
-                records.forEach((record, index) => {
+            matchingRecords.forEach((record, index) => {
+                const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
                 response += `
 📄 **نتيجة ${index + 1}:**
 👤 **الاسم**: ${record.name}
@@ -268,13 +257,12 @@ bot.on('message', async (msg) => {
 
                 `;
             });
-        }
 
-if (response) {
-    bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
-} else {
-    bot.sendMessage(chatId, `❌ لا توجد نتائج تطابق المدخل "${input}"`);
-}
+            bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+        } else {
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
+        }
+    }
 
     // حفظ بيانات المستخدم في MongoDB
    const userData = {
