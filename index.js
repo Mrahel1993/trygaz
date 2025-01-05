@@ -253,8 +253,6 @@ bot.on('message', async (msg) => {
 📂 **اسم الملف**: ${safeFileName}
 📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}`;
 
-               
-            });
     bot.sendMessage(chatId, response, { parse_mode: 'Markdown' }); 
             
         } else {
