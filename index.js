@@ -236,10 +236,12 @@ bot.on('message', async (msg) => {
 
         
              if (matchingRecords.length > 0) {
-    matchingRecords.forEach((record, index) => {
-        const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
-        const resultMessage = `📄 **نتيجة ${index + 1}:**
+            let response = `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**\n\n`;
 
+            matchingRecords.forEach((record, index) => {
+                const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
+                response += `
+📄 **نتيجة ${index + 1}:**
 👤 **الاسم**: ${record.name}
 🏘️ **الحي / المنطقة**: ${record.area}
 🏙️ **المدينة**: ${record.district}
@@ -251,10 +253,12 @@ bot.on('message', async (msg) => {
 
 📜 **الحالة**: ${record.status}
 📂 **اسم الملف**: ${safeFileName}
-📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}`;
+📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}
 
-    bot.sendMessage(chatId, response, { parse_mode: 'Markdown' }); 
-            
+                `;
+            });
+
+            bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
             bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
         }
