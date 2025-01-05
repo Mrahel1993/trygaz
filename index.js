@@ -235,11 +235,22 @@ bot.on('message', async (msg) => {
         );
 
         
-             if (matchingRecords.length > 0) {
+              if (matchingRecords.length > 0) {
             let response = `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**\n\n`;
 
-            matchingRecords.forEach((record, index) => {
-                const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
+            // تقسيم النتائج حسب الملف
+            const resultsByFile = matchingRecords.reduce((acc, record) => {
+                if (!acc[record._fileName]) {
+                    acc[record._fileName] = [];
+                }
+                acc[record._fileName].push(record);
+                return acc;
+            }, {});
+
+            // عرض النتائج من كل ملف Excel
+            for (const [fileName, records] of Object.entries(resultsByFile)) {
+                response += `📂 **النتائج من الملف: ${fileName}:**\n\n`;
+                records.forEach((record, index) => {
                 response += `
 📄 **نتيجة ${index + 1}:**
 👤 **الاسم**: ${record.name}
