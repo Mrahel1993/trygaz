@@ -148,48 +148,6 @@ loadDataFromExcelFolder(excelFolderPath);
 // قائمة معرفات المسؤولين
 const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
-// دالة لإرسال رسالة إلى جميع المسؤولين
-async function sendBroadcastMessage(message, adminId) {
-    try {
-        if (message.length > 4096) {
-            await bot.sendMessage(adminId, "⚠️ الرسالة طويلة جدًا. يرجى تقصيرها إلى أقل من 4096 حرفًا.");
-            return;
-        }
-
-        const users = await User.find();
-        if (users.length === 0) {
-            console.log("⚠️ لا يوجد مستخدمون في قاعدة البيانات.");
-            await bot.sendMessage(adminId, "⚠️ لا يوجد مستخدمون لإرسال الرسالة إليهم.");
-            return;
-        }
-
-        let successCount = 0;
-        let failureCount = 0;
-
-        const sendPromises = users.map(async user => {
-            try {
-                await bot.sendMessage(user.chatId, message);
-                successCount++;
-            } catch (error) {
-                console.error(`❌ فشل إرسال الرسالة إلى المستخدم ${user.chatId}:`, error.message);
-                if (error.response && error.response.statusCode === 403) {
-                    console.log(`🚫 المستخدم ${user.chatId} قد يكون قد حظر البوت.`);
-                }
-                failureCount++;
-            }
-        });
-
-        await Promise.all(sendPromises);
-        await bot.sendMessage(adminId, `✅ تم إرسال الرسائل. \n📬 نجاح: ${successCount} \n❌ فشل: ${failureCount}`);
-    } catch (error) {
-        console.error('❌ حدث خطأ أثناء إرسال الرسائل:', error.message);
-        await bot.sendMessage(adminId, "❌ حدث خطأ أثناء إرسال الرسائل.");
-    }
-}
-
-
-
-
 // الرد على أوامر البوت
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
