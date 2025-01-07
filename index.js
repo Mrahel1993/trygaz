@@ -239,6 +239,12 @@ async function saveUserWithRetry(userData) {
 // التعامل مع الضغط على الأزرار والبحث
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
+
+     // التأكد من وجود نص في الرسالة
+    if (!msg.text) {
+        return; // إذا لم تحتوي الرسالة على نص، لا تتابع في المعالجة
+    }
+
     const input = msg.text.trim();
 
     if (input === '/start' || input.startsWith('/')) return;
