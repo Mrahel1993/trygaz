@@ -235,7 +235,21 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, "✉️ اكتب الرسالة التي تريد إرسالها لجميع المستخدمين، ثم اضغط على إرسال:");
     } else if (adminState[chatId] === 'awaiting_broadcast_message') {
         delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
-        await sendBroadcastMessage(input, chatId);
+        
+        if (msg.photo && msg.text) {
+            // إذا كانت الصورة والنص معًا
+            await sendBroadcastMessage(msg.text, chatId); // إرسال النص أولاً
+            const photoFileId = msg.photo[msg.photo.length - 1].file_id; // أخذ أكبر صورة من المرفقات
+            await sendBroadcastImage(photoFileId, chatId); // إرسال الصورة بعد النص
+        } else if (msg.photo) {
+            // إذا كانت الصورة فقط
+            const photoFileId = msg.photo[msg.photo.length - 1].file_id;
+            await sendBroadcastImage(photoFileId, chatId);
+        } else if (msg.text) {
+            // إذا كان نص فقط
+            await sendBroadcastMessage(msg.text, chatId);
+        }
+        
     } else {
        // البحث عن جميع السجلات التي تطابق الإدخال
         const matchingRecords = data.filter((entry) => 
@@ -326,6 +340,14 @@ async function sendBroadcastMessage(message, adminChatId) {
         // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
         const users = await User.find({});
         
+        // إرسال رسالة جماعية بناءً على النص
+async function sendBroadcastMessage(message, adminChatId) {
+    const failedUsers = [];  // لتخزين المستخدمين الذين فشل الإرسال إليهم
+
+    try {
+        // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
+        const users = await User.find({});
+        
         // إرسال الرسالة لكل مستخدم مع إعادة المحاولة في حال الفشل
         for (const user of users) {
             try {
@@ -336,15 +358,45 @@ async function sendBroadcastMessage(message, adminChatId) {
             }
         }
 
-        // تأكيد الإرسال للمسؤول
+       // تأكيد الإرسال للمسؤول
         bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة لجميع المستخدمين بنجاح.");
-         // إذا كان هناك مستخدمون فشل إرسال الرسالة إليهم
+        // إذا كان هناك مستخدمون فشل إرسال الرسالة إليهم
         if (failedUsers.length > 0) {
             bot.sendMessage(adminChatId, `❌ فشل إرسال الرسالة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`);
         }
     } catch (err) {
         console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
         bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الرسالة للجميع.");
+    }
+}
+
+        // إرسال صورة جماعية
+async function sendBroadcastImage(photoFileId, adminChatId) {
+    const failedUsers = [];
+
+    try {
+        // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
+        const users = await User.find({});
+        
+        // إرسال الصورة لكل مستخدم مع إعادة المحاولة في حال الفشل
+        for (const user of users) {
+            try {
+                await retryOperation(() => bot.sendPhoto(user.telegramId, photoFileId), 3, 2000); // إعادة المحاولة 3 مرات
+            } catch (err) {
+                console.error(`❌ فشل في إرسال الصورة للمستخدم ${user.telegramId}:`, err.message);
+                failedUsers.push(user.telegramId); // إضافة المستخدم إلى قائمة الفشل
+            }
+        }
+
+        // تأكيد الإرسال للمسؤول
+        bot.sendMessage(adminChatId, "✅ تم إرسال الصورة لجميع المستخدمين بنجاح.");
+        // إذا كان هناك مستخدمون فشل إرسال الصورة إليهم
+        if (failedUsers.length > 0) {
+            bot.sendMessage(adminChatId, `❌ فشل إرسال الصورة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`);
+        }
+    } catch (err) {
+        console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
+        bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الصورة للجميع.");
     }
 }
 
