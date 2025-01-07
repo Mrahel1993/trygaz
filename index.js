@@ -158,7 +158,7 @@ bot.onText(/\/start/, (msg) => {
     const options = {
         reply_markup: {
             keyboard: [
-                [{ text: "🔍 البحث برقم الهوية أو الاسم" }], 
+                [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
                 [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
             ],
             resize_keyboard: true,
@@ -176,97 +176,121 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
 
-// التعامل مع الضغط على الأزرار
+// إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
+async function sendMessageWithRetry(chatId, message) {
+    await retryOperation(() => bot.sendMessage(chatId, message));
+}
+
+// حفظ بيانات المستخدم في MongoDB مع إعادة المحاولة عند حدوث خطأ
+async function saveUserWithRetry(userData) {
+    await retryOperation(async () => {
+        let user = await User.findOne({ telegramId: userData.telegramId });
+        if (!user) {
+            user = new User(userData);
+            await user.save();
+            console.log(`User ${userData.telegramId} saved to database.`);
+        } else {
+            console.log(`User ${userData.telegramId} already exists.`);
+        }
+    });
+}
+
+// التعامل مع الضغط على الأزرار والبحث
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const input = msg.text.trim();
 
     if (input === '/start' || input.startsWith('/')) return;
 
-    if (input === "📢 إرسال رسالة للجميع" && adminIds.includes(chatId.toString())) {
+    if (input === "🔍 البحث برقم الهوية أو الاسم") {
+        bot.sendMessage(chatId, "📝 أدخل رقم الهوية أو الاسم للبحث:");
+    } else if (input === "📞 معلومات الاتصال") {
+        const contactMessage = `
+📞 **معلومات الاتصال:**
+للمزيد من الدعم أو الاستفسار
+في حال حدوث اي خلل
+يمكنك التواصل معنا عبر:
+💬 تلجرام: [https://t.me/AhmedGarqoud]
+        `;
+        bot.sendMessage(chatId, contactMessage, { parse_mode: 'Markdown' });
+    } else if (input === "📖 معلومات عن البوت") {
+        const aboutMessage = `
+🤖 **معلومات عن البوت:**
+هذا البوت يتيح لك البحث عن اسمك في كشوفات الغاز باستخدام رقم الهوية أو اسمك كما هو مسجل في كشوفات الغاز.
+- يتم عرض تفاصيل اسمك بما في ذلك بيانات الموزع وحالة طلبك.
+هدفنا هو تسهيل الوصول إلى بيانتات.
+هذا بوت مجهود شخصي ولا يتبع لاي جهة.
+🔧 **التطوير والصيانة**: تم تطوير هذا البوت بواسطة [احمد محمد].
+        `;
+        bot.sendMessage(chatId, aboutMessage, { parse_mode: 'Markdown' });
+    } else if (input === "📢 إرسال رسالة للجميع" && adminIds.includes(chatId.toString())) {
         adminState[chatId] = 'awaiting_broadcast_message';
-        bot.sendMessage(chatId, "✉️ اختر نوع الرسالة: نص أو صورة:", {
-            reply_markup: {
-                keyboard: [
-                    [{ text: "📜 رسالة نصية" }],
-                    [{ text: "🖼️ صورة" }],
-                ],
-                resize_keyboard: true,
-                one_time_keyboard: true,
-            }
-        });
+        bot.sendMessage(chatId, "✉️ اكتب الرسالة التي تريد إرسالها لجميع المستخدمين، ثم اضغط على إرسال:");
     } else if (adminState[chatId] === 'awaiting_broadcast_message') {
-        if (input === "📜 رسالة نصية") {
-            adminState[chatId] = 'awaiting_message_text';
-            bot.sendMessage(chatId, "✏️ اكتب الرسالة النصية التي تريد إرسالها لجميع المستخدمين:");
-        } else if (input === "🖼️ صورة") {
-            adminState[chatId] = 'awaiting_image';
-            bot.sendMessage(chatId, "📸 أرسل الصورة التي تريد إرسالها لجميع المستخدمين:");
-        }
-    } else if (adminState[chatId] === 'awaiting_message_text') {
-        delete adminState[chatId];
+        delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
         await sendBroadcastMessage(input, chatId);
-    } else if (adminState[chatId] === 'awaiting_image') {
-        delete adminState[chatId];
-        bot.sendPhoto(chatId, msg.photo[msg.photo.length - 1].file_id, { caption: "📢 إرسال صورة لجميع المستخدمين." }).then(() => {
-            sendBroadcastImage(msg.photo[msg.photo.length - 1].file_id, chatId);
-        });
+    } else {
+       // البحث عن جميع السجلات التي تطابق الإدخال
+        const matchingRecords = data.filter((entry) => 
+            entry.idNumber === input || entry.name.includes(input)
+        );
+
+        
+             if (matchingRecords.length > 0) {
+                  // ترتيب النتائج حسب اسم الملف تصاعديًا
+                  matchingRecords.sort((a, b) => a._fileName.localeCompare(b._fileName));  
+                  let response = `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**\n\n`;
+            matchingRecords.forEach(async (record, index) => {
+                const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
+                const resultMessage = `
+📄 **نتيجة ${index + 1}:**
+👤 **الاسم**: ${record.name}
+🏘️ **الحي / المنطقة**: ${record.area}
+🏙️ **المدينة**: ${record.district}
+📍 **المحافظة**: ${record.province}
+
+📛 **اسم الموزع**: ${record.distributorName}
+📞 **رقم جوال الموزع**: ${record.distributorPhone}
+🆔 **هوية الموزع**: ${record.distributorId}
+
+📜 **الحالة**: ${record.status}
+📂 **اسم الملف**: ${safeFileName}
+📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}
+                `;
+                // إرسال كل نتيجة في رسالة منفصلة
+        await bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown' });
+            });
+
+        } else {
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
+        }
     }
+
+    // حفظ بيانات المستخدم في MongoDB
+   const userData = {
+    telegramId: msg.from.id,
+    username: msg.from.username || "No Username",  // اسم المستخدم
+    firstName: msg.from.first_name || "No First Name",  // الاسم الأول
+    lastName: msg.from.last_name || "No Last Name",  // الاسم الأخير
+    languageCode: msg.from.language_code || "en",  // اللغة
+    bio: msg.from.bio || "No Bio",  // السيرة الذاتية
+    phoneNumber: msg.contact ? msg.contact.phone_number : null,  // رقم الهاتف إذا تم مشاركته
+    isBot: msg.from.is_bot,  // ما إذا كان المستخدم هو بوت
+    chatId: msg.chat.id,  // معرّف المحادثة
+  };
+
+  await saveUserWithRetry(userData);
 });
-
-// إرسال الرسالة النصية لجميع المستخدمين
-async function sendBroadcastMessage(message, adminChatId) {
-    const failedUsers = [];
-
-    try {
-        const users = await User.find({});
-        
-        for (const user of users) {
-            try {
-                await retryOperation(() => bot.sendMessage(user.telegramId, message), 3, 2000);
-            } catch (err) {
-                console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
-                failedUsers.push(user.telegramId);
-            }
+async function sendMessageToAdmins(message) {
+    for (const adminId of adminIds) {
+        try {
+            await bot.sendMessage(adminId, message);
+        } catch (error) {
+            console.error(`❌ لم يتم إرسال الرسالة إلى المسؤول ${adminId}: ${error.message}`);
         }
-
-        bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة لجميع المستخدمين بنجاح.");
-        if (failedUsers.length > 0) {
-            bot.sendMessage(adminChatId, `❌ فشل إرسال الرسالة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`);
-        }
-    } catch (err) {
-        console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
-        bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الرسالة للجميع.");
     }
 }
 
-// إرسال الصورة لجميع المستخدمين
-async function sendBroadcastImage(imageId, adminChatId) {
-    const failedUsers = [];
-
-    try {
-        const users = await User.find({});
-        
-        for (const user of users) {
-            try {
-                await retryOperation(() => bot.sendPhoto(user.telegramId, imageId, { caption: "📢 إرسال صورة لجميع المستخدمين." }), 3, 2000);
-            } catch (err) {
-                console.error(`❌ فشل في إرسال الصورة للمستخدم ${user.telegramId}:`, err.message);
-                failedUsers.push(user.telegramId);
-            }
-        }
-
-        bot.sendMessage(adminChatId, "✅ تم إرسال الصورة لجميع المستخدمين بنجاح.");
-        if (failedUsers.length > 0) {
-            bot.sendMessage(adminChatId, `❌ فشل إرسال الصورة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`);
-        }
-    } catch (err) {
-        console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
-        bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الصورة للجميع.");
-    }
-}
-
-// تشغيل السيرفر
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
