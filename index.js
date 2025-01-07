@@ -155,10 +155,6 @@ const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
 
-    // التحقق إذا كان المستخدم يتحدث لأول مرة (رسالة جديدة)
-    if (msg.text === '/start') return; // إذا كانت الرسالة بالفعل /start، لا حاجة لإرسالها مرة أخرى.
-
-    if (msg.new_chat_member || msg.chat.type === 'private') {
 
     const options = {
         reply_markup: {
@@ -170,9 +166,7 @@ bot.onText(/\/start/, (msg) => {
             one_time_keyboard: false,
         },
     };
-          bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
-        return;
-    }
+         
 
     if (adminIds.includes(chatId.toString())) {
         options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
