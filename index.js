@@ -73,14 +73,6 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// دالة لتحسين التعامل مع البيانات المفقودة أو غير الصالحة
-const cleanData = (value) => {
-    if (value === null || value === undefined || value === "") {
-        return "غير متوفر"; // إرجاع "غير متوفر" إذا كانت القيمة مفقودة أو فارغة
-    }
-    return value.toString().trim() || "غير متوفر"; // تحويل القيمة إلى نص والتأكد من أنها ليست فارغة
-};
-
 // دالة لتحميل البيانات من جميع ملفات Excel في مجلد معين
 async function loadDataFromExcelFolder(folderPath) {
     data = [];
@@ -133,12 +125,6 @@ async function loadDataFromExcelFolder(folderPath) {
     }
 }
 
-// تحسين Logging للأخطاء
-function logError(error, source = '') {
-    console.error(`❌ [${new Date().toISOString()}] ${source ? source + " - " : ""}${error.message}`);
-    sendMessageToAdmins(`❌ [${new Date().toISOString()}] ${source ? source + " - " : ""}${error.message}`);
-}
-
 // استدعاء الدالة مع مسار المجلد
 const excelFolderPath = './excel-files'; // استبدل بمسار المجلد الخاص بك
 loadDataFromExcelFolder(excelFolderPath);
@@ -150,11 +136,6 @@ const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
 
-    // التحقق إذا كان المستخدم يتحدث لأول مرة (رسالة جديدة)
-    if (msg.text === '/start') return; // إذا كانت الرسالة بالفعل /start، لا حاجة لإرسالها مرة أخرى.
-
-    if (msg.new_chat_member || msg.chat.type === 'private') {
-
     const options = {
         reply_markup: {
             keyboard: [
@@ -165,9 +146,6 @@ bot.onText(/\/start/, (msg) => {
             one_time_keyboard: false,
         },
     };
-          bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
-        return;
-    }
 
     if (adminIds.includes(chatId.toString())) {
         options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
@@ -176,111 +154,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
 
-// إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
-async function sendMessageWithRetry(chatId, message) {
-    await retryOperation(() => bot.sendMessage(chatId, message));
-}
-
-// حفظ بيانات المستخدم في MongoDB مع إعادة المحاولة عند حدوث خطأ
-async function saveUserWithRetry(userData) {
-    await retryOperation(async () => {
-        let user = await User.findOne({ telegramId: userData.telegramId });
-        if (!user) {
-            user = new User(userData);
-            await user.save();
-            console.log(`User ${userData.telegramId} saved to database.`);
-        } else {
-            console.log(`User ${userData.telegramId} already exists.`);
-        }
-    });
-}
-
-// التعامل مع الضغط على الأزرار والبحث
-bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-    const input = msg.text.trim();
-
-    if (input === '/start' || input.startsWith('/')) return;
-
-    if (input === "🔍 البحث برقم الهوية أو الاسم") {
-        bot.sendMessage(chatId, "📝 أدخل رقم الهوية أو الاسم للبحث:");
-    } else if (input === "📞 معلومات الاتصال") {
-        const contactMessage = `
-📞 **معلومات الاتصال:**
-للمزيد من الدعم أو الاستفسار
-في حال حدوث اي خلل
-يمكنك التواصل معنا عبر:
-💬 تلجرام: [https://t.me/AhmedGarqoud]
-        `;
-        bot.sendMessage(chatId, contactMessage, { parse_mode: 'Markdown' });
-    } else if (input === "📖 معلومات عن البوت") {
-        const aboutMessage = `
-🤖 **معلومات عن البوت:**
-هذا البوت يتيح لك البحث عن اسمك في كشوفات الغاز باستخدام رقم الهوية أو اسمك كما هو مسجل في كشوفات الغاز.
-- يتم عرض تفاصيل اسمك بما في ذلك بيانات الموزع وحالة طلبك.
-هدفنا هو تسهيل الوصول إلى بيانتات.
-هذا بوت مجهود شخصي ولا يتبع لاي جهة.
-🔧 **التطوير والصيانة**: تم تطوير هذا البوت بواسطة [احمد محمد].
-        `;
-        bot.sendMessage(chatId, aboutMessage, { parse_mode: 'Markdown' });
-    } else if (input === "📢 إرسال رسالة للجميع" && adminIds.includes(chatId.toString())) {
-        adminState[chatId] = 'awaiting_broadcast_message';
-        bot.sendMessage(chatId, "✉️ اكتب الرسالة التي تريد إرسالها لجميع المستخدمين، ثم اضغط على إرسال:");
-    } else if (adminState[chatId] === 'awaiting_broadcast_message') {
-        delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
-        await sendBroadcastMessage(input, chatId);
-    } else {
-       // البحث عن جميع السجلات التي تطابق الإدخال
-        const matchingRecords = data.filter((entry) => 
-            entry.idNumber === input || entry.name.includes(input)
-        );
-
-        
-             if (matchingRecords.length > 0) {
-                  // ترتيب النتائج حسب اسم الملف تصاعديًا
-                  matchingRecords.sort((a, b) => a._fileName.localeCompare(b._fileName));  
-                  let response = `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل "${input}":**\n\n`;
-            matchingRecords.forEach(async (record, index) => {
-                const safeFileName = record._fileName.replace(/[_*]/g, '\\$&'); // للهروب من الرموز الخاصة
-                const resultMessage = `
-📄 **نتيجة ${index + 1}:**
-👤 **الاسم**: ${record.name}
-🏘️ **الحي / المنطقة**: ${record.area}
-🏙️ **المدينة**: ${record.district}
-📍 **المحافظة**: ${record.province}
-
-📛 **اسم الموزع**: ${record.distributorName}
-📞 **رقم جوال الموزع**: ${record.distributorPhone}
-🆔 **هوية الموزع**: ${record.distributorId}
-
-📜 **الحالة**: ${record.status}
-📂 **اسم الملف**: ${safeFileName}
-📅 **تاريخ التعديل الأخير**: ${record.lastModifiedDate}
-                `;
-                // إرسال كل نتيجة في رسالة منفصلة
-        await bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown' });
-            });
-
-        } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
-        }
-    }
-
-    // حفظ بيانات المستخدم في MongoDB
-   const userData = {
-    telegramId: msg.from.id,
-    username: msg.from.username || "No Username",  // اسم المستخدم
-    firstName: msg.from.first_name || "No First Name",  // الاسم الأول
-    lastName: msg.from.last_name || "No Last Name",  // الاسم الأخير
-    languageCode: msg.from.language_code || "en",  // اللغة
-    bio: msg.from.bio || "No Bio",  // السيرة الذاتية
-    phoneNumber: msg.contact ? msg.contact.phone_number : null,  // رقم الهاتف إذا تم مشاركته
-    isBot: msg.from.is_bot,  // ما إذا كان المستخدم هو بوت
-    chatId: msg.chat.id,  // معرّف المحادثة
-  };
-
-  await saveUserWithRetry(userData);
-});
+// دالة لإرسال رسالة للأدمنين
 async function sendMessageToAdmins(message) {
     for (const adminId of adminIds) {
         try {
@@ -288,6 +162,75 @@ async function sendMessageToAdmins(message) {
         } catch (error) {
             console.error(`❌ لم يتم إرسال الرسالة إلى المسؤول ${adminId}: ${error.message}`);
         }
+    }
+}
+
+// التعامل مع الضغط على الزر "📢 إرسال رسالة للجميع"
+bot.on('message', async (msg) => {
+    const chatId = msg.chat.id;
+    const input = msg.text.trim();
+
+    if (input === "📢 إرسال رسالة للجميع" && adminIds.includes(chatId.toString())) {
+        adminState[chatId] = 'awaiting_message_type';
+        bot.sendMessage(chatId, "📝 اختر نوع المحتوى الذي تريد إرساله:", {
+            reply_markup: {
+                keyboard: [
+                    [{ text: "📜 رسالة نصية" }],
+                    [{ text: "🖼️ صورة" }]
+                ],
+                resize_keyboard: true,
+                one_time_keyboard: true
+            }
+        });
+        return;
+    }
+
+    if (adminState[chatId] === 'awaiting_message_type') {
+        if (input === "📜 رسالة نصية") {
+            adminState[chatId] = 'awaiting_text_message';
+            bot.sendMessage(chatId, "✏️ اكتب الرسالة النصية التي تريد إرسالها:");
+        } else if (input === "🖼️ صورة") {
+            adminState[chatId] = 'awaiting_image';
+            bot.sendMessage(chatId, "📸 أرسل الصورة التي تريد إرسالها:");
+        }
+    } else if (adminState[chatId] === 'awaiting_text_message') {
+        delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
+        await sendBroadcastMessage(input, chatId);
+    } else if (adminState[chatId] === 'awaiting_image') {
+        delete adminState[chatId]; // إزالة الحالة بعد استلام الصورة
+        bot.sendPhoto(chatId, msg.photo[msg.photo.length - 1].file_id)
+            .then(() => {
+                sendImageToAll(input); // إرسال الصورة إلى الجميع
+            })
+            .catch(error => {
+                console.error('❌ حدث خطأ أثناء إرسال الصورة:', error.message);
+            });
+    }
+});
+
+// دالة لإرسال رسالة نصية للجميع
+async function sendBroadcastMessage(message, chatId) {
+    try {
+        for (const adminId of adminIds) {
+            await bot.sendMessage(adminId, message);
+        }
+        bot.sendMessage(chatId, "✅ تم إرسال الرسالة النصية لجميع المستخدمين.");
+    } catch (error) {
+        console.error("❌ حدث خطأ أثناء إرسال الرسالة النصية:", error.message);
+        bot.sendMessage(chatId, "❌ حدث خطأ أثناء إرسال الرسالة النصية.");
+    }
+}
+
+// دالة لإرسال صورة للجميع
+async function sendImageToAll(imageId) {
+    try {
+        for (const adminId of adminIds) {
+            await bot.sendPhoto(adminId, imageId);
+        }
+        bot.sendMessage(adminIds[0], "✅ تم إرسال الصورة لجميع المستخدمين.");
+    } catch (error) {
+        console.error("❌ حدث خطأ أثناء إرسال الصورة:", error.message);
+        bot.sendMessage(adminIds[0], "❌ حدث خطأ أثناء إرسال الصورة.");
     }
 }
 
