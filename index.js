@@ -23,10 +23,6 @@ const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z
 // إنشاء البوت
 const bot = new TelegramBot(token, { polling: false });
 
-bot.setMyCommands([
-    { command: '/start', description: 'جاهز ابدأ البحث' }
-]);
-
 const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
 bot.setWebHook(`${webhookUrl}/bot${token}`);
 
@@ -159,6 +155,10 @@ const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
 
+    // التحقق إذا كان المستخدم يتحدث لأول مرة (رسالة جديدة)
+    if (msg.text === '/start') return; // إذا كانت الرسالة بالفعل /start، لا حاجة لإرسالها مرة أخرى.
+
+    if (msg.new_chat_member || msg.chat.type === 'private') {
 
     const options = {
         reply_markup: {
@@ -170,7 +170,9 @@ bot.onText(/\/start/, (msg) => {
             one_time_keyboard: false,
         },
     };
-         
+          bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
+        return;
+    }
 
     if (adminIds.includes(chatId.toString())) {
         options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
@@ -178,42 +180,6 @@ bot.onText(/\/start/, (msg) => {
 
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
-
-// إرسال رسالة مع صورة
-async function sendPhotoWithCaption(chatId, photoPath, caption) {
-    try {
-        await bot.sendPhoto(chatId, photoPath, { caption });
-    } catch (error) {
-        console.error(`❌ خطأ أثناء إرسال الصورة: ${error.message}`);
-    }
-}
-
-// إرسال رسالة جماعية مع صورة
-async function sendBroadcastWithPhoto(message, photoPath, adminChatId) {
-    const failedUsers = [];
-
-    try {
-        const users = await User.find({});
-
-        for (const user of users) {
-            try {
-                await bot.sendPhoto(user.telegramId, photoPath, { caption: message });
-            } catch (err) {
-                console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
-                failedUsers.push(user.telegramId);
-            }
-        }
-
-        bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة مع الصورة لجميع المستخدمين بنجاح.");
-
-        if (failedUsers.length > 0) {
-            bot.sendMessage(adminChatId, `❌ فشل إرسال الرسالة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`);
-        }
-    } catch (err) {
-        console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
-        bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الرسالة مع الصورة للجميع.");
-    }
-}
 
 
 // إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
@@ -239,12 +205,6 @@ async function saveUserWithRetry(userData) {
 // التعامل مع الضغط على الأزرار والبحث
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-
-     // التأكد من وجود نص في الرسالة
-    if (!msg.text) {
-        return; // إذا لم تحتوي الرسالة على نص، لا تتابع في المعالجة
-    }
-
     const input = msg.text.trim();
 
     if (input === '/start' || input.startsWith('/')) return;
@@ -359,30 +319,32 @@ async function retryOperation(operation, retries = 3, delay = 2000, operationNam
 
 
 // إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
-async function sendBroadcastWithPhoto(message, photoPath, adminChatId) {
-    const failedUsers = [];
+async function sendBroadcastMessage(message, adminChatId) {
+    const failedUsers = [];  // لتخزين المستخدمين الذين فشل الإرسال إليهم
 
     try {
+        // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
         const users = await User.find({});
-
+        
+        // إرسال الرسالة لكل مستخدم مع إعادة المحاولة في حال الفشل
         for (const user of users) {
             try {
-                await bot.sendPhoto(user.telegramId, photoPath, { caption: message });
-                console.log(`[${new Date().toISOString()}] رسالة وصورة تم إرسالها بنجاح للمستخدم ${user.telegramId}`);
+                await retryOperation(() => bot.sendMessage(user.telegramId, message), 3, 2000); // إعادة المحاولة 3 مرات
             } catch (err) {
-                console.error(`[${new Date().toISOString()}] فشل في إرسال الرسالة مع الصورة للمستخدم ${user.telegramId}:`, err.message);
-                failedUsers.push(user.telegramId);
+                console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
+                failedUsers.push(user.telegramId); // إضافة المستخدم إلى قائمة الفشل
             }
         }
 
-        bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة مع الصورة لجميع المستخدمين بنجاح.");
-
+        // تأكيد الإرسال للمسؤول
+        bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة لجميع المستخدمين بنجاح.");
+         // إذا كان هناك مستخدمون فشل إرسال الرسالة إليهم
         if (failedUsers.length > 0) {
             bot.sendMessage(adminChatId, `❌ فشل إرسال الرسالة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`);
         }
     } catch (err) {
         console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
-        bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الرسالة مع الصورة للجميع.");
+        bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الرسالة للجميع.");
     }
 }
 
