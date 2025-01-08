@@ -4,7 +4,7 @@
   "description": "Telegram bot to fetch gaz results from an Excel file.",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
