@@ -157,7 +157,6 @@ async function loadDataFromExcelFolder(folderPath) {
 // تحسين Logging للأخطاء
 function logError(error, source = '') {
     console.error(`❌ [${new Date().toISOString()}] ${source ? source + " - " : ""}${error.message}`);
-    sendMessageToAdmins(`❌ [${new Date().toISOString()}] ${source ? source + " - " : ""}${error.message}`);
 }
 
 
@@ -357,7 +356,7 @@ async function retryOperation(operation, retries = 3, delay = 2000, operationNam
                 await new Promise(resolve => setTimeout(resolve, delay)); // الانتظار قبل المحاولة التالية
             } else {
                 console.error('❌ تم استنفاد المحاولات.');
-                sendMessageToAdmins(`❌ حدث خطأ أثناء ${operationName}: ${error.message}`);
+                
                 throw error; // إعادة رمي الخطأ بعد الاستنفاد
             }
         }
