@@ -184,6 +184,11 @@ bot.onText(/\/start/, (msg) => {
         },
     };
 
+      if (adminIds.includes(chatId.toString())) {
+        options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
+    }
+
+
        // إضافة زر "عرض عدد المستخدمين" للمسؤولين فقط
     if (adminIds.includes(chatId.toString())) {
         const inlineKeyboard = {
@@ -217,12 +222,7 @@ bot.on('callback_query', async (query) => {
     }
 });
 
-    if (adminIds.includes(chatId.toString())) {
-        options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
-    }
-
-    bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
-});
+  
 
 
 // إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
