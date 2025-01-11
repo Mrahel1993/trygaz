@@ -91,6 +91,8 @@ function normalizeArabicText(text) {
     let normalizedText = text.replace(diacriticsRegex, '');
     // تحويل الأحرف مثل "أ", "إ", "آ" إلى "ا"
     normalizedText = normalizedText.replace(/[أإآ]/g, 'ا');
+     // تحويل الأحرف مثل "ى" إلى "ي"
+    normalizedText = normalizedText.replace(/ى/g, 'ي');
     // إزالة المسافات الزائدة
     normalizedText = normalizedText.replace(/\s+/g, ' ').trim();
     return normalizedText;
