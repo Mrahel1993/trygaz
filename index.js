@@ -1,5 +1,6 @@
 // هذا البوت كامل وجاهز دون اخطاء مع ظهورالنتائج منفصلة ومن اكثر من ملف
 const TelegramBot = require('node-telegram-bot-api');
+const { InlineKeyboardMarkup, InlineKeyboardButton } = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -182,6 +183,39 @@ bot.onText(/\/start/, (msg) => {
             one_time_keyboard: false,
         },
     };
+
+       // إضافة زر "عرض عدد المستخدمين" للمسؤولين فقط
+    if (adminIds.includes(chatId.toString())) {
+        const inlineKeyboard = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
+                ],
+            },
+        };
+        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
+        bot.sendMessage(chatId, "للإدارة، يمكنك استخدام الأزرار أدناه:", inlineKeyboard);
+    } else {
+        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
+    }
+});
+
+// التعامل مع الضغط على الأزرار
+bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    const callbackData = query.data;
+
+    if (callbackData === 'show_user_count') {
+        try {
+            // جلب عدد المستخدمين من قاعدة البيانات
+            const userCount = await User.countDocuments();
+            bot.sendMessage(chatId, `📊 عدد المستخدمين المسجلين في قاعدة البيانات هو: ${userCount}`);
+        } catch (err) {
+            console.error('❌ فشل في جلب عدد المستخدمين:', err.message);
+            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب عدد المستخدمين.");
+        }
+    }
+});
 
     if (adminIds.includes(chatId.toString())) {
         options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
