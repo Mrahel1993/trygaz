@@ -184,17 +184,20 @@ bot.onText(/\/start/, (msg) => {
         },
     };
 
-      if (adminIds.includes(chatId.toString())) {
-        options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
-    }
-
-
-        // إضافة زر "عرض عدد المستخدمين" للمسؤولين فقط
+       // إضافة زر "عرض عدد المستخدمين" للمسؤولين فقط
     if (adminIds.includes(chatId.toString())) {
-        options.reply_markup.keyboard.push([{ text: "📊 عرض عدد المستخدمين" }]);
+        const inlineKeyboard = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
+                ],
+            },
+        };
+        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
+        bot.sendMessage(chatId, "للإدارة، يمكنك استخدام الأزرار أدناه:", inlineKeyboard);
+    } else {
+        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
     }
-
-    bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
 });
 
 // التعامل مع الضغط على الأزرار
@@ -214,7 +217,12 @@ bot.on('callback_query', async (query) => {
     }
 });
 
-  
+    if (adminIds.includes(chatId.toString())) {
+        options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
+    }
+
+    bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
+});
 
 
 // إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
