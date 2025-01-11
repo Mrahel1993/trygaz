@@ -193,24 +193,11 @@ async function saveUserWithRetry(userData) {
     });
 }
 
-// دالة لإزالة التشكيل
-function removeDiacritics(text) {
-    return text.replace(/[\u064B-\u0652]/g, ''); // إزالة التشكيل العربي
-}
-
-// دالة لتوحيد النصوص
-function normalizeArabic(text) {
-    return text
-        .replace(/[\u0622-\u0625]/g, 'ا') // تحويل الهمزات إلى ألف
-        .replace(/ى/g, 'ي') // تحويل الألف المقصورة إلى ياء
-        .replace(/ؤ|ئ/g, 'و') // تحويل الهمزة المربوطة على واو إلى واو
-        .trim(); // إزالة المسافات الزائدة
-}
 
 // التعامل مع الضغط على الأزرار والبحث
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-    const input = normalizeArabic(removeDiacritics(msg.text.trim())); // تطبيع النص المدخل
+    const input = msg.text.trim();
 
     if (input === '/start' || input.startsWith('/')) return;
 
