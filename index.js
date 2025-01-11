@@ -83,6 +83,19 @@ const cleanData = (value) => {
     return value.toString().trim() || "غير متوفر"; // تحويل القيمة إلى نص والتأكد من أنها ليست فارغة
 };
 
+// دالة لإزالة التشكيل وتوحيد النصوص
+function normalizeArabicText(text) {
+    if (!text) return '';
+    // إزالة التشكيل
+    const diacriticsRegex = /[\u0617-\u061A\u064B-\u0652]/g;
+    let normalizedText = text.replace(diacriticsRegex, '');
+    // تحويل الأحرف مثل "أ", "إ", "آ" إلى "ا"
+    normalizedText = normalizedText.replace(/[أإآ]/g, 'ا');
+    // إزالة المسافات الزائدة
+    normalizedText = normalizedText.replace(/\s+/g, ' ').trim();
+    return normalizedText;
+}
+
 
 // دالة لتحميل البيانات من جميع ملفات Excel في مجلد معين
 async function loadDataFromExcelFolder(folderPath) {
@@ -229,13 +242,17 @@ bot.on('message', async (msg) => {
         delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
         await sendBroadcastMessage(input, chatId);
     } else {
-       // البحث عن جميع السجلات التي تطابق الإدخال
-        const matchingRecords = data.filter((entry) => 
-            entry.idNumber === input || entry.name.includes(input)
-        );
+       // تحسين البحث ليشمل تطبيع النصوص
+        const normalizedInput = normalizeArabicText(input); // تطبيع الإدخال
+        const matchingRecords = data.filter((entry) => {
+            const normalizedName = normalizeArabicText(entry.name); // تطبيع الأسماء المخزنة
+            return (
+                entry.idNumber === input ||
+                normalizedName.includes(normalizedInput) // البحث المتوافق
+            );
+        });
 
-        
-             if (matchingRecords.length > 0) {
+        if (matchingRecords.length > 0) {
                  
                 // ترتيب النتائج حسب اسم الملف تصاعديًا
                   matchingRecords.sort((a, b) => a._fileName.localeCompare(b._fileName));  
