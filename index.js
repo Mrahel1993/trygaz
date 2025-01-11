@@ -194,6 +194,7 @@ bot.onText(/\/start/, (msg) => {
             reply_markup: {
                 inline_keyboard: [
                     [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
+                     [{ text: "📈 إحصائيات البوت", callback_data: 'bot_statistics' }],
                 ],
             },
         };
@@ -204,7 +205,7 @@ bot.onText(/\/start/, (msg) => {
     }
 });
 
-// التعامل مع الضغط على الأزرار
+// التعامل مع الضغط على زر  عرض عدد المستخدمين
 bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const callbackData = query.data;
@@ -221,7 +222,45 @@ bot.on('callback_query', async (query) => {
     }
 });
 
-  
+  // التعامل مع الضغط على زر   إحصائيات البوت
+bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    const callbackData = query.data;
+
+    if (callbackData === 'show_user_count') {
+        try {
+            const userCount = await User.countDocuments();
+            bot.sendMessage(chatId, `📊 عدد المستخدمين المسجلين في قاعدة البيانات هو: ${userCount}`);
+        } catch (err) {
+            console.error('❌ فشل في جلب عدد المستخدمين:', err.message);
+            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب عدد المستخدمين.");
+        }
+    } else if (callbackData === 'bot_statistics') {
+        try {
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+            const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+            const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+
+            const weeklyUsers = await User.countDocuments({ joinedAt: { $gte: oneWeekAgo } });
+            const monthlyUsers = await User.countDocuments({ joinedAt: { $gte: oneMonthAgo } });
+            const yearlyUsers = await User.countDocuments({ joinedAt: { $gte: oneYearAgo } });
+
+            const statisticsMessage = `
+📈 **إحصائيات البوت:**
+- 🗓️ المستخدمون الجدد هذا الأسبوع: ${weeklyUsers}
+- 📅 المستخدمون الجدد هذا الشهر: ${monthlyUsers}
+- 📆 المستخدمون الجدد هذا العام: ${yearlyUsers}
+            `;
+            bot.sendMessage(chatId, statisticsMessage, { parse_mode: 'Markdown' });
+        } catch (err) {
+            console.error('❌ فشل في جلب إحصائيات البوت:', err.message);
+            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب إحصائيات البوت.");
+        }
+    }
+});
+
+
 
 
 // إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
