@@ -93,6 +93,8 @@ function normalizeArabicText(text) {
     normalizedText = normalizedText.replace(/[أإآ]/g, 'ا');
      // تحويل الأحرف مثل "ى" إلى "ي"
     normalizedText = normalizedText.replace(/ى/g, 'ي');
+    // حذف بعض الأحرف غير الضرورية مثل "ة" إلى "ه"
+    normalizedText = normalizedText.replace(/[ة]/g, 'ه');
     // إزالة المسافات الزائدة
     normalizedText = normalizedText.replace(/\s+/g, ' ').trim();
     return normalizedText;
