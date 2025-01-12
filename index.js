@@ -169,80 +169,81 @@ loadDataFromExcelFolder(excelFolderPath);
 // قائمة معرفات المسؤولين
 const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
-// الرد على أوامر البوت
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
 
-    const options = {
+    // إعداد لوحة المفاتيح الرئيسية
+    const mainKeyboard = {
         reply_markup: {
             keyboard: [
                 [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
                 [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
-                 [{ text: "قائمة خدماتنا"  }] 
+                [{ text: "قائمة خدماتنا" }]
             ],
             resize_keyboard: true,
             one_time_keyboard: false,
         },
     };
 
-      if (adminIds.includes(chatId.toString())) {
-        options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
+    // إضافة زر "إرسال رسالة للجميع" للمسؤولين فقط
+    if (adminIds.includes(chatId.toString())) {
+        mainKeyboard.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
     }
 
-    // التعامل مع الضغط على زر "Menu"
+    // إرسال الرسالة الترحيبية مع لوحة المفاتيح المناسبة
+    bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", mainKeyboard);
+
+    // إذا كان المستخدم مسؤولاً، أضف أزرار الإدارة الإضافية
+    if (adminIds.includes(chatId.toString())) {
+        const adminInlineKeyboard = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
+                    [{ text: "📈 إحصائيات البوت", callback_data: 'bot_statistics' }],
+                ],
+            },
+        };
+        bot.sendMessage(chatId, "للإدارة، يمكنك استخدام الأزرار أدناه:", adminInlineKeyboard);
+    }
+});
+
+// التعامل مع الرسائل النصية العامة
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
 
     if (text === "Menu") {
-        const menuOptions = {
+        // إعداد لوحة مفاتيح قائمة "Menu"
+        const menuKeyboard = {
             reply_markup: {
                 keyboard: [
-                    [{ text: "ابدأ البحث" }, { text: "الرجوع" }]  // الأزرار داخل "Menu"
+                    [{ text: "ابدأ البحث" }, { text: "الرجوع" }]
                 ],
                 resize_keyboard: true,
                 one_time_keyboard: false,
             },
         };
-        bot.sendMessage(chatId, "اختر أحد الخيارات من القائمة:", menuOptions);
+        bot.sendMessage(chatId, "اختر أحد الخيارات من القائمة:", menuKeyboard);
     }
 
     if (text === "الرجوع") {
         // العودة إلى القائمة الرئيسية
-        const options = {
+        const mainKeyboard = {
             reply_markup: {
                 keyboard: [
                     [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
                     [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
-                    [{ text: "قائمة خدماتنا" }]  // زر "Menu"
+                    [{ text: "قائمة خدماتنا" }]
                 ],
                 resize_keyboard: true,
                 one_time_keyboard: false,
             },
         };
-        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
+        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", mainKeyboard);
     }
 });
 
-
-       // إضافة زر "عرض عدد المستخدمين" للمسؤولين فقط
-    if (adminIds.includes(chatId.toString())) {
-        const inlineKeyboard = {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
-                     [{ text: "📈 إحصائيات البوت", callback_data: 'bot_statistics' }],
-                ],
-            },
-        };
-        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
-        bot.sendMessage(chatId, "للإدارة، يمكنك استخدام الأزرار أدناه:", inlineKeyboard);
-    } else {
-        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
-    }
-});
-
-// التعامل مع الضغط على زر  عرض عدد المستخدمين
+// التعامل مع الضغط على أزرار Inline Keyboard
 bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const callbackData = query.data;
@@ -257,7 +258,18 @@ bot.on('callback_query', async (query) => {
             bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب عدد المستخدمين.");
         }
     }
+
+    if (callbackData === 'bot_statistics') {
+        try {
+            // هنا يمكن إضافة منطق جلب الإحصائيات
+            bot.sendMessage(chatId, "📈 الإحصائيات غير متوفرة حاليًا. سيتم إضافتها لاحقًا.");
+        } catch (err) {
+            console.error('❌ فشل في جلب إحصائيات البوت:', err.message);
+            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب الإحصائيات.");
+        }
+    }
 });
+
 
   // التعامل مع الضغط على زر   إحصائيات البوت
 bot.on('callback_query', async (query) => {
