@@ -1,3 +1,4 @@
+
 // هذا البوت كامل وجاهز دون اخطاء مع ظهورالنتائج منفصلة ومن اكثر من ملف
 const TelegramBot = require('node-telegram-bot-api');
 const { InlineKeyboardMarkup, InlineKeyboardButton } = require('node-telegram-bot-api');
@@ -171,7 +172,7 @@ const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 // الرد على أوامر البوت
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    
+    const status = msg.new_chat_member.status;
 
     const options = {
         reply_markup: {
@@ -203,25 +204,6 @@ bot.onText(/\/start/, (msg) => {
         bot.sendMessage(chatId, "للإدارة، يمكنك استخدام الأزرار أدناه:", inlineKeyboard);
     } else {
         bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
-    }
-});
-
-// دالة لتفعيل أمر /start تلقائيًا عند بداية التفاعل مع المستخدمين
-bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-    
-    // إرسال رسالة /start عند التفاعل مع المستخدمين الجدد
-    if (msg.text && !msg.text.startsWith('/')) {
-        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", {
-            reply_markup: {
-                keyboard: [
-                    [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
-                    [{ text: "📞 الدعم أو الاستفسار" }, { text: "📖 معلومات عن البوت" }],
-                ],
-                resize_keyboard: true,
-                one_time_keyboard: false,
-            },
-        });
     }
 });
 
