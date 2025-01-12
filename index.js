@@ -172,7 +172,6 @@ const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 // الرد على أوامر البوت
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    const status = msg.new_chat_member.status;
 
     const options = {
         reply_markup: {
