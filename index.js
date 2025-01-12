@@ -178,6 +178,7 @@ bot.onText(/\/start/, (msg) => {
             keyboard: [
                 [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
                 [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
+                 [{ text: "قائمة خدماتنا"  }] 
             ],
             resize_keyboard: true,
             one_time_keyboard: false,
@@ -187,6 +188,41 @@ bot.onText(/\/start/, (msg) => {
       if (adminIds.includes(chatId.toString())) {
         options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
     }
+
+    // التعامل مع الضغط على زر "Menu"
+bot.on('message', (msg) => {
+    const chatId = msg.chat.id;
+    const text = msg.text;
+
+    if (text === "Menu") {
+        const menuOptions = {
+            reply_markup: {
+                keyboard: [
+                    [{ text: "ابدأ البحث" }, { text: "الرجوع" }]  // الأزرار داخل "Menu"
+                ],
+                resize_keyboard: true,
+                one_time_keyboard: false,
+            },
+        };
+        bot.sendMessage(chatId, "اختر أحد الخيارات من القائمة:", menuOptions);
+    }
+
+    if (text === "الرجوع") {
+        // العودة إلى القائمة الرئيسية
+        const options = {
+            reply_markup: {
+                keyboard: [
+                    [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
+                    [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
+                    [{ text: "قائمة خدماتنا" }]  // زر "Menu"
+                ],
+                resize_keyboard: true,
+                one_time_keyboard: false,
+            },
+        };
+        bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
+    }
+});
 
 
        // إضافة زر "عرض عدد المستخدمين" للمسؤولين فقط
