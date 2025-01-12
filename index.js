@@ -181,7 +181,7 @@ loadDataFromExcelFolder(excelFolderPath);
 const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
 // الرد على أوامر البوت
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
 
      // تسجيل الأمر كحدث
