@@ -172,51 +172,32 @@ const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
 
-    // إعداد لوحة المفاتيح الرئيسية
-    const mainKeyboard = {
-        reply_markup: {
-            keyboard: [
-                [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
-                [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
-                [{ text: "قائمة خدماتنا" }]
-            ],
-            resize_keyboard: true,
-            one_time_keyboard: false,
-        },
-    };
+    // التحقق من إذا كان المستخدم مسؤولاً
+    const isAdmin = adminIds.includes(chatId.toString());
 
-    // إضافة زر "إرسال رسالة للجميع" للمسؤولين فقط
-    if (adminIds.includes(chatId.toString())) {
-        mainKeyboard.reply_markup.keyboard.push([
-            { text: "📢 إرسال رسالة للجميع" },
-            { text: "⚙️ إدارة البوت" }
-        ]);
-    }
+    // إنشاء لوحة المفاتيح الرئيسية
+    const mainKeyboard = createMainKeyboard(isAdmin);
 
-    // إرسال الرسالة الترحيبية مع لوحة المفاتيح المناسبة
+    // إرسال الرسالة الترحيبية مع لوحة المفاتيح الرئيسية
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", mainKeyboard);
 
-    // إذا كان المستخدم مسؤولاً، أضف أزرار الإدارة الإضافية
-    if (adminIds.includes(chatId.toString())) {
-        const adminInlineKeyboard = {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
-                    [{ text: "📈 إحصائيات البوت", callback_data: 'bot_statistics' }],
-                ],
-            },
-        };
-        bot.sendMessage(chatId, "للإدارة، يمكنك استخدام الأزرار أدناه:", adminInlineKeyboard);
+    // إرسال أزرار الإدارة للمسؤولين فقط
+    if (isAdmin) {
+        const adminInlineKeyboard = createAdminInlineKeyboard();
+        bot.sendMessage(chatId, "⚙️ خيارات إدارة البوت:", adminInlineKeyboard);
     }
 });
 
-// التعامل مع الرسائل النصية العامة
+// التعامل مع الرسائل النصية
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
 
+    // التحقق إذا كان المستخدم مسؤولاً
+    const isAdmin = adminIds.includes(chatId.toString());
+
     if (text === "Menu") {
-        // إعداد لوحة مفاتيح قائمة "Menu"
+        // لوحة مفاتيح قائمة "Menu"
         const menuKeyboard = {
             reply_markup: {
                 keyboard: [
@@ -227,146 +208,92 @@ bot.on('message', (msg) => {
             },
         };
         bot.sendMessage(chatId, "اختر أحد الخيارات من القائمة:", menuKeyboard);
-    }
-
-    if (text === "الرجوع") {
+    } else if (text === "الرجوع") {
         // العودة إلى القائمة الرئيسية
-        const mainKeyboard = {
-            reply_markup: {
-                keyboard: [
-                    [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
-                    [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
-                    [{ text: "قائمة خدماتنا" }]
-                ],
-                resize_keyboard: true,
-                one_time_keyboard: false,
-            },
-        };
-
-         // إضافة أزرار المسؤولين عند العودة
-        if (adminIds.includes(chatId.toString())) {
-            mainKeyboard.reply_markup.keyboard.push([
-                { text: "📢 إرسال رسالة للجميع" },
-                { text: "⚙️ إدارة البوت" }
-            ]);
-        }
+        const mainKeyboard = createMainKeyboard(isAdmin);
         bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", mainKeyboard);
-    }
-     if (text === "⚙️ إدارة البوت" && adminIds.includes(chatId.toString())) {
-        // إعداد Inline Keyboard لإدارة البوت
-        const adminInlineKeyboard = {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
-                    [{ text: "📈 إحصائيات البوت", callback_data: 'bot_statistics' }],
-                    [{ text: "📝 إعدادات أخرى", callback_data: 'other_settings' }]
-                ],
-            },
-        };
-
+    } else if (text === "⚙️ إدارة البوت" && isAdmin) {
+        // خيارات إدارة البوت
+        const adminInlineKeyboard = createAdminInlineKeyboard();
         bot.sendMessage(chatId, "⚙️ خيارات إدارة البوت:", adminInlineKeyboard);
     }
 });
 
-// التعامل مع الضغط على أزرار Inline Keyboard
+// التعامل مع أزرار Inline Keyboard
 bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const callbackData = query.data;
 
-    if (callbackData === 'show_user_count') {
-        try {
-            // جلب عدد المستخدمين من قاعدة البيانات
+    try {
+        if (callbackData === 'show_user_count') {
+            // جلب عدد المستخدمين
             const userCount = await User.countDocuments();
-            bot.sendMessage(chatId, `📊 عدد المستخدمين المسجلين في قاعدة البيانات هو: ${userCount}`);
-        } catch (err) {
-            console.error('❌ فشل في جلب عدد المستخدمين:', err.message);
-            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب عدد المستخدمين.");
+            bot.sendMessage(chatId, `📊 عدد المستخدمين المسجلين هو: ${userCount}`);
+        } else if (callbackData === 'bot_statistics') {
+            // إحصائيات البوت
+            const statistics = await getBotStatistics();
+            bot.sendMessage(chatId, statistics, { parse_mode: 'Markdown' });
+        } else if (callbackData === 'other_settings') {
+            bot.sendMessage(chatId, "📝 إعدادات أخرى قيد التطوير.");
         }
-    }
-
-    if (callbackData === 'bot_statistics') {
-        try {
-            // منطق جلب إحصائيات البوت
-            bot.sendMessage(chatId, "📈 الإحصائيات غير متوفرة حاليًا. سيتم إضافتها لاحقًا.");
-        } catch (err) {
-            console.error('❌ فشل في جلب إحصائيات البوت:', err.message);
-            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب الإحصائيات.");
-        }
-    }
-
-    if (callbackData === 'other_settings') {
-        bot.sendMessage(chatId, "📝 إعدادات أخرى قيد التطوير.");
-    }
-});
-});
-
-// التعامل مع الضغط على أزرار Inline Keyboard
-bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const callbackData = query.data;
-
-    if (callbackData === 'show_user_count') {
-        try {
-            // جلب عدد المستخدمين من قاعدة البيانات
-            const userCount = await User.countDocuments();
-            bot.sendMessage(chatId, `📊 عدد المستخدمين المسجلين في قاعدة البيانات هو: ${userCount}`);
-        } catch (err) {
-            console.error('❌ فشل في جلب عدد المستخدمين:', err.message);
-            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب عدد المستخدمين.");
-        }
-    }
-
-    if (callbackData === 'bot_statistics') {
-        try {
-            // هنا يمكن إضافة منطق جلب الإحصائيات
-            bot.sendMessage(chatId, "📈 الإحصائيات غير متوفرة حاليًا. سيتم إضافتها لاحقًا.");
-        } catch (err) {
-            console.error('❌ فشل في جلب إحصائيات البوت:', err.message);
-            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب الإحصائيات.");
-        }
+    } catch (err) {
+        console.error('❌ حدث خطأ:', err.message);
+        bot.sendMessage(chatId, "❌ حدث خطأ أثناء معالجة طلبك.");
     }
 });
 
+// دالة لإنشاء لوحة المفاتيح الرئيسية
+function createMainKeyboard(isAdmin) {
+    const keyboard = [
+        [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
+        [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
+        [{ text: "قائمة خدماتنا" }]
+    ];
 
-  // التعامل مع الضغط على زر   إحصائيات البوت
-bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const callbackData = query.data;
+    if (isAdmin) {
+        keyboard.push([{ text: "📢 إرسال رسالة للجميع" }, { text: "⚙️ إدارة البوت" }]);
+    }
 
-    if (callbackData === 'show_user_count') {
-        try {
-            const userCount = await User.countDocuments();
-            bot.sendMessage(chatId, `📊 عدد المستخدمين المسجلين في قاعدة البيانات هو: ${userCount}`);
-        } catch (err) {
-            console.error('❌ فشل في جلب عدد المستخدمين:', err.message);
-            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب عدد المستخدمين.");
-        }
-    } else if (callbackData === 'bot_statistics') {
-        try {
-            const now = new Date();
-            const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-            const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-            const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    return {
+        reply_markup: {
+            keyboard,
+            resize_keyboard: true,
+            one_time_keyboard: false,
+        },
+    };
+}
 
-            const weeklyUsers = await User.countDocuments({ joinedAt: { $gte: oneWeekAgo } });
-            const monthlyUsers = await User.countDocuments({ joinedAt: { $gte: oneMonthAgo } });
-            const yearlyUsers = await User.countDocuments({ joinedAt: { $gte: oneYearAgo } });
+// دالة لإنشاء لوحة مفاتيح الإدارة
+function createAdminInlineKeyboard() {
+    return {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
+                [{ text: "📈 إحصائيات البوت", callback_data: 'bot_statistics' }],
+                [{ text: "📝 إعدادات أخرى", callback_data: 'other_settings' }]
+            ],
+        },
+    };
+}
 
-            const statisticsMessage = `
+// دالة لجلب إحصائيات البوت
+async function getBotStatistics() {
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+    const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+
+    const weeklyUsers = await User.countDocuments({ joinedAt: { $gte: oneWeekAgo } });
+    const monthlyUsers = await User.countDocuments({ joinedAt: { $gte: oneMonthAgo } });
+    const yearlyUsers = await User.countDocuments({ joinedAt: { $gte: oneYearAgo } });
+
+    return `
 📈 **إحصائيات البوت:**
 - 🗓️ المستخدمون الجدد هذا الأسبوع: ${weeklyUsers}
 - 📅 المستخدمون الجدد هذا الشهر: ${monthlyUsers}
 - 📆 المستخدمون الجدد هذا العام: ${yearlyUsers}
-            `;
-            bot.sendMessage(chatId, statisticsMessage, { parse_mode: 'Markdown' });
-        } catch (err) {
-            console.error('❌ فشل في جلب إحصائيات البوت:', err.message);
-            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب إحصائيات البوت.");
-        }
-    }
-});
-
-
+    `;
+}
 
 
 // إرسال رسالة مع إعادة المحاولة في حال حدوث خطأ
