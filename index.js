@@ -1,5 +1,5 @@
 
-// تسجيل المستخدمين هذا البوت كامل وجاهز دون اخطاء مع ظهورالنتائج منفصلة ومن اكثر من ملف
+// هذا البوت كامل وجاهز دون اخطاء مع ظهورالنتائج منفصلة ومن اكثر من ملف
 const TelegramBot = require('node-telegram-bot-api');
 const { InlineKeyboardMarkup, InlineKeyboardButton } = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
@@ -76,17 +76,6 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', userSchema);
-
-// تعريف مخطط الأحداث في MongoDB
-const eventSchema = new mongoose.Schema({
-    userId: { type: Number, required: true }, // معرّف المستخدم
-    message: { type: String, required: true }, // الرسالة التي أرسلها المستخدم
-    eventType: { type: String, required: true }, // نوع الحدث (مثال: "رسالة" أو "أمر")
-    timestamp: { type: Date, default: Date.now }, // تاريخ ووقت الحدث
-});
-
-// تعريف نموذج الأحداث
-const Event = mongoose.model('Event', eventSchema);
 
 // دالة لتحسين التعامل مع البيانات المفقودة أو غير الصالحة
 const cleanData = (value) => {
@@ -181,11 +170,8 @@ loadDataFromExcelFolder(excelFolderPath);
 const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
 // الرد على أوامر البوت
-bot.onText(/\/start/, async (msg) => {
+bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-
-     // تسجيل الأمر كحدث
-    await logUserEvent(chatId, '/start', 'أمر');
 
     const options = {
         reply_markup: {
@@ -339,9 +325,6 @@ bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const input = msg.text.trim();
 
-    // تسجيل الرسالة كحدث
-    await logUserEvent(chatId, input, 'رسالة');
-
     if (input === '/start' || input.startsWith('/')) return;
 
     if (input === "🔍 البحث برقم الهوية أو الاسم") {
@@ -415,8 +398,6 @@ bot.on('message', async (msg) => {
         }
     }
 
-    
-
     // حفظ بيانات المستخدم في MongoDB
    const userData = {
     telegramId: msg.from.id,
@@ -437,21 +418,6 @@ bot.on('message', async (msg) => {
         console.error('Error saving user to database:', err);
     }
 });
-
-// دالة لتسجيل الحدث في قاعدة البيانات
-async function logUserEvent(userId, message, eventType) {
-    try {
-        const event = new Event({
-            userId: userId,
-            message: message,
-            eventType: eventType,
-        });
-        await event.save();
-        console.log(`تم تسجيل الحدث للمستخدم ${userId}: ${message}`);
-    } catch (error) {
-        console.error(`❌ فشل في تسجيل الحدث للمستخدم ${userId}: ${error.message}`);
-    }
-}
 
 async function retryOperation(operation, retries = 3, delay = 2000, operationName = 'عملية') {
     let attempt = 0;
