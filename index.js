@@ -187,7 +187,10 @@ bot.onText(/\/start/, (msg) => {
 
     // إضافة زر "إرسال رسالة للجميع" للمسؤولين فقط
     if (adminIds.includes(chatId.toString())) {
-        mainKeyboard.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
+        mainKeyboard.reply_markup.keyboard.push([
+            { text: "📢 إرسال رسالة للجميع" },
+            { text: "⚙️ إدارة البوت" }
+        ]);
     }
 
     // إرسال الرسالة الترحيبية مع لوحة المفاتيح المناسبة
@@ -239,8 +242,62 @@ bot.on('message', (msg) => {
                 one_time_keyboard: false,
             },
         };
+
+         // إضافة أزرار المسؤولين عند العودة
+        if (adminIds.includes(chatId.toString())) {
+            mainKeyboard.reply_markup.keyboard.push([
+                { text: "📢 إرسال رسالة للجميع" },
+                { text: "⚙️ إدارة البوت" }
+            ]);
+        }
         bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", mainKeyboard);
     }
+     if (text === "⚙️ إدارة البوت" && adminIds.includes(chatId.toString())) {
+        // إعداد Inline Keyboard لإدارة البوت
+        const adminInlineKeyboard = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
+                    [{ text: "📈 إحصائيات البوت", callback_data: 'bot_statistics' }],
+                    [{ text: "📝 إعدادات أخرى", callback_data: 'other_settings' }]
+                ],
+            },
+        };
+
+        bot.sendMessage(chatId, "⚙️ خيارات إدارة البوت:", adminInlineKeyboard);
+    }
+});
+
+// التعامل مع الضغط على أزرار Inline Keyboard
+bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    const callbackData = query.data;
+
+    if (callbackData === 'show_user_count') {
+        try {
+            // جلب عدد المستخدمين من قاعدة البيانات
+            const userCount = await User.countDocuments();
+            bot.sendMessage(chatId, `📊 عدد المستخدمين المسجلين في قاعدة البيانات هو: ${userCount}`);
+        } catch (err) {
+            console.error('❌ فشل في جلب عدد المستخدمين:', err.message);
+            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب عدد المستخدمين.");
+        }
+    }
+
+    if (callbackData === 'bot_statistics') {
+        try {
+            // منطق جلب إحصائيات البوت
+            bot.sendMessage(chatId, "📈 الإحصائيات غير متوفرة حاليًا. سيتم إضافتها لاحقًا.");
+        } catch (err) {
+            console.error('❌ فشل في جلب إحصائيات البوت:', err.message);
+            bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب الإحصائيات.");
+        }
+    }
+
+    if (callbackData === 'other_settings') {
+        bot.sendMessage(chatId, "📝 إعدادات أخرى قيد التطوير.");
+    }
+});
 });
 
 // التعامل مع الضغط على أزرار Inline Keyboard
