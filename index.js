@@ -1,5 +1,5 @@
 
-// هذا البوت كامل وجاهز دون اخطاء مع ظهورالنتائج منفصلة ومن اكثر من ملف
+// تسجيل المستخدمين هذا البوت كامل وجاهز دون اخطاء مع ظهورالنتائج منفصلة ومن اكثر من ملف
 const TelegramBot = require('node-telegram-bot-api');
 const { InlineKeyboardMarkup, InlineKeyboardButton } = require('node-telegram-bot-api');
 const ExcelJS = require('exceljs');
