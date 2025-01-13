@@ -28,7 +28,7 @@ let data = [];
 let adminState = {}; // لتتبع حالة المسؤولين أثناء إرسال الرسائل
 
 // إعداد اتصال MongoDB
-const mongoURI = process.env.MONGO_URI;
+const mongoURI = process.env.MONGO_URI;   || 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDBtrygaz?retryWrites=true&w=majority';
 mongoose.connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
