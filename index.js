@@ -17,6 +17,10 @@ const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
 
 //-------------------------------------------
 const bot = new TelegramBot(token, { polling: false });
+// عند بدء تشغيل البوت، أرسل رسالة ترحيب للمستخدمين الجدد
+bot.on('polling_error', (error) => {
+  console.log(`Polling error: ${error.code}`);
+});
 // تعيين الـ webhook
 axios.post(`https://api.telegram.org/bot${token}/setWebhook`, {
     url: `${webhookUrl}/bot${token}`
