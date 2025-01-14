@@ -173,10 +173,12 @@ async function sendBroadcastMessage(message, adminChatId) {
 
 //-------------------------------------------
 // دالة لإنشاء لوحة المفاتيح الرئيسية
-bot.onText(/\/start/, (msg) => {
+bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
+    const input = msg.text.trim();
 
     // الخيارات الأساسية للمستخدمين
+    if (input === '/start') {
     const options = {
         reply_markup: {
             keyboard: [
@@ -197,9 +199,10 @@ bot.onText(/\/start/, (msg) => {
     }
 
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
-});
+ return; // العودة لتجنب المعالجة المكررة
+    }
 
-//-------------------------------------------
+    //-------------------------------------------
 
 // التعامل مع خيارات لوحة التحكم
 bot.on('message', (msg) => {
@@ -257,11 +260,7 @@ bot.on('callback_query', async (query) => {
 //-------------------------------------------
 
 // التعامل مع البحث والرسائل الأخرى
-bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-    const input = msg.text.trim();
-
-    if (input === '/start' || input.startsWith('/')) return;
+     if (input === '/start' || input.startsWith('/')) return;
 
     if (input === "🔍 البحث برقم الهوية أو الاسم") {
         bot.sendMessage(chatId, "📝 أدخل رقم الهوية أو الاسم للبحث:");
@@ -329,7 +328,8 @@ bot.on('message', async (msg) => {
 });
 
 
-    //-------------------------------------------
+
+//-------------------------------------------
 
 // حفظ بيانات المستخدم في MongoDB
   bot.on('message', async (msg) => {
