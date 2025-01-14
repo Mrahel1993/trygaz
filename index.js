@@ -12,8 +12,8 @@ const port = process.env.PORT || 4000;
 app.use(express.json());
 
 // استبدال التوكن الخاص بك
-const token = process.env.TELEGRAM_BOT_TOKEN || '7857872067:AAGVzREaPkV6YIaa8WPegeWn_tk1fHDQRIo';
-const webhookUrl = process.env.WEBHOOK_URL || 'https://gaza-gaz-new-update.onrender.com';
+const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z-AxaCbwopEx_zZU';
+const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
 
 //-------------------------------------------
 const bot = new TelegramBot(token, { polling: false });
@@ -33,7 +33,7 @@ const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
 //-------------------------------------------
 // اتصال MongoDB Atlas
-const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDB?retryWrites=true&w=majority';
+const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDBtrygaz?retryWrites=true&w=majority';
 mongoose.connect(mongoURI, {useNewUrlParser: true, useUnifiedTopology: true,serverSelectionTimeoutMS: 30000, })  // 30 ثانية
 .then(() => console.log('Connected to MongoDB Atlas'))
 .catch(err => console.error('MongoDB connection error:', err));
