@@ -16,6 +16,7 @@ const token = process.env.TELEGRAM_BOT_TOKEN || '7857872067:AAGVzREaPkV6YIaa8WPe
 const webhookUrl = process.env.WEBHOOK_URL || 'https://gaza-gaz-new-update.onrender.com';
 
 //-------------------------------------------
+const bot = new TelegramBot(token, { polling: false });
 // تعيين الـ webhook
 axios.post(`https://api.telegram.org/bot${token}/setWebhook`, {
     url: `${webhookUrl}/bot${token}`
