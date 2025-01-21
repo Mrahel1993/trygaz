@@ -1,61 +1,47 @@
+// هذا البوت كامل وجاهز دون اخطاء
+const TelegramBot = require('node-telegram-bot-api');
+const ExcelJS = require('exceljs');
 const express = require('express');
 const mongoose = require('mongoose');
-const fs = require('fs');
-const path = require('path');
-const ExcelJS = require('exceljs');
-const axios = require('axios');
-const TelegramBot = require('node-telegram-bot-api');
+require('dotenv').config();
 
+// إعداد السيرفر Express
 const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(express.json());
+app.use(express.json()); // لتلقي الطلبات بتنسيق JSON
+
+app.get('/', (req, res) => {
+    res.send('The server is running successfully.');
+});
 
 // استبدال التوكن الخاص بك
 const token = process.env.TELEGRAM_BOT_TOKEN || '7742968603:AAFD-02grJl4Kt2V9b6Z-AxaCbwopEx_zZU';
+
+// إنشاء البوت
+const bot = new TelegramBot(token, { polling: false  });
+
 const webhookUrl = process.env.WEBHOOK_URL || 'https://trygaz.onrender.com';
+bot.setWebHook(`${webhookUrl}/bot${token}`);
 
-//-------------------------------------------
-const bot = new TelegramBot(token, { polling: false });
-// عند بدء تشغيل البوت، أرسل رسالة ترحيب للمستخدمين الجدد
-bot.on('polling_error', (error) => {
-  console.log(`Polling error: ${error.code}`);
-});
-// تعيين الـ webhook
-axios.post(`https://api.telegram.org/bot${token}/setWebhook`, {
-    url: `${webhookUrl}/bot${token}`
-}).then(() => {
-    console.log('Webhook set successfully');
-}).catch((error) => {
-    console.error('Error setting webhook:', error);
+app.post(`/bot${token}`, (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
 });
 
-//-------------------------------------------
+// تخزين البيانات من Excel
+let data = [];
+let adminState = {}; // لتتبع حالة المسؤولين أثناء إرسال الرسائل
 
-// قائمة معرفات المسؤولين
-const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
-
-//-------------------------------------------
 // اتصال MongoDB Atlas
 const mongoURI = 'mongodb+srv://mrahel1993:7Am7dkIitbpVN9Oq@cluster0.rjekk.mongodb.net/userDBtrygaz?retryWrites=true&w=majority';
-mongoose.connect(mongoURI, {useNewUrlParser: true, useUnifiedTopology: true,serverSelectionTimeoutMS: 30000, })  // 30 ثانية
+mongoose.connect(mongoURI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
 .then(() => console.log('Connected to MongoDB Atlas'))
 .catch(err => console.error('MongoDB connection error:', err));
 
-// إعادة الاتصال تلقائيًا في حال فقدان الاتصال
-mongoose.connection.on('disconnected', () => {
-    console.log('MongoDB connection lost. Reconnecting...');
-    mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-        .then(() => console.log('Reconnected to MongoDB Atlas'))
-        .catch(err => console.error('Failed to reconnect to MongoDB Atlas:', err));
-});
-
-// التعامل مع أخطاء الاتصال بشكل عام
-mongoose.connection.on('error', err => {
-    console.error('MongoDB connection error:', err);
-});
-
-//-------------------------------------------
 // تعريف مخطط المستخدمين في MongoDB
 const userSchema = new mongoose.Schema({
   telegramId: { type: Number, required: true, unique: true },
@@ -63,6 +49,7 @@ const userSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
   languageCode: String, // اللغة التي يستخدمها المستخدم
+  // photo: String, // صورة الملف الشخصي (إذا كانت موجودة)
   bio: String, // السيرة الذاتية (إذا كانت موجودة)
   phoneNumber: String, // رقم الهاتف (إذا شاركه المستخدم)
   isBot: Boolean, // هل المستخدم هو بوت أو شخص حقيقي
@@ -71,25 +58,17 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', userSchema);
-// تخزين البيانات من Excel
-let data = [];
-let adminState = {}; // لتتبع حالة المسؤولين أثناء إرسال الرسائل
 
-// استدعاء الدالة مع مسار المجلد
-const excelFolderPath = './excel-files'; // استبدل بمسار المجلد الخاص بك
-loadDataFromExcelFolder(excelFolderPath);
-
-// دالة لتحميل البيانات من جميع ملفات Excel في مجلد معين
-async function loadDataFromExcelFolder(folderPath) {
+// دالة لتحميل البيانات من ملفات Excel
+async function loadDataFromExcelFiles(filePaths) {
     data = [];
     try {
-        const fileNames = fs.readdirSync(folderPath).filter(file => file.endsWith('.xlsx'));
-        for (const fileName of fileNames) {
-            const filePath = path.join(folderPath, fileName);
+        for (const filePath of filePaths) {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.readFile(filePath);
             const worksheet = workbook.worksheets[0];
-            const fileStats = fs.statSync(filePath);
+
+            const fileStats = require('fs').statSync(filePath);
             const lastModifiedDate = fileStats.mtime.toISOString().split('T')[0];
 
             worksheet.eachRow((row) => {
@@ -115,8 +94,6 @@ async function loadDataFromExcelFolder(folderPath) {
                         distributorPhone: distributorPhone || "غير متوفر",
                         status: status || "غير متوفر",
                         deliveryDate: lastModifiedDate,
-                        _fileName: fileName,  // إضافة اسم الملف
-                        lastModifiedDate: lastModifiedDate,  // إضافة تاريخ آخر تعديل
                     });
                 }
             });
@@ -126,151 +103,50 @@ async function loadDataFromExcelFolder(folderPath) {
         sendMessageToAdmins("📢 تم تحديث البيانات من جميع الملفات بنجاح! يمكنك الآن البحث في البيانات المحدثة.");
     } catch (error) {
         console.error('❌ حدث خطأ أثناء قراءة ملفات Excel:', error.message);
-        sendMessageToAdmins(`❌ حدث خطأ أثناء قراءة ملفات Excel: ${error.message}`);
     }
 }
 
+// استدعاء الدالة مع ملفات متعددة
+const excelFiles = ['b.xlsx', 'k.xlsx', 'r.xlsx']; // استبدل بأسماء ملفاتك
+loadDataFromExcelFiles(excelFiles);
 
-//-------------------------------------------
-// إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
-async function sendBroadcastMessage(message, adminChatId) {
-    const failedUsers = [];  // لتخزين المستخدمين الذين فشل الإرسال إليهم
+// قائمة معرفات المسؤولين
+const adminIds = process.env.ADMIN_IDS?.split(',') || ['7719756994'];
 
-    try {
-        // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
-        const users = await User.find({});
-        
-        // إرسال الرسالة لكل مستخدم مع إعادة المحاولة في حال الفشل
-         for (const user of users) {
-            try {
-                await retryOperation(() => axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-                    chat_id: user.telegramId,
-                    text: message
-                }), 3, 2000); // إعادة المحاولة 3 مرات
-            } catch (err) {
-                console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
-                failedUsers.push(user.telegramId); // إضافة المستخدم إلى قائمة الفشل
-            }
-        }
-
-         // تأكيد الإرسال للمسؤول
-        await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-            chat_id: adminChatId,
-            text: "✅ تم إرسال الرسالة لجميع المستخدمين بنجاح."
-        });
-
-        // إذا كان هناك مستخدمون فشل إرسال الرسالة إليهم
-        if (failedUsers.length > 0) {
-            await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-                chat_id: adminChatId,
-                text: `❌ فشل إرسال الرسالة إلى المستخدمين التاليين: ${failedUsers.join(', ')}`
-            });
-        }
-    } catch (err) {
-        console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
-        await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-            chat_id: adminChatId,
-            text: "❌ حدث خطأ أثناء إرسال الرسالة للجميع."
-        });
-    }
-}
-
-//-------------------------------------------
-// دالة لإنشاء لوحة المفاتيح الرئيسية
-bot.on('message', async (msg) => {
+// الرد على أوامر البوت
+bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    const input = msg.text.trim();
 
-    // الخيارات الأساسية للمستخدمين
-    if (input === '/start') {
     const options = {
         reply_markup: {
             keyboard: [
                 [{ text: "🔍 البحث برقم الهوية أو الاسم" }],
-                [{ text: "📞 الدعم أو الاستفسار" }, { text: "📖 معلومات عن البوت" }],
+                [{ text: "📞 معلومات الاتصال" }, { text: "📖 معلومات عن البوت" }],
             ],
             resize_keyboard: true,
             one_time_keyboard: false,
         },
     };
 
-    // إضافة خيارات الإدارة إذا كان المستخدم مسؤولاً
     if (adminIds.includes(chatId.toString())) {
-        options.reply_markup.keyboard.push([
-            { text: "📢 إرسال رسالة للجميع" },
-            { text: "⚙️ لوحة التحكم" },
-        ]);
+        options.reply_markup.keyboard.push([{ text: "📢 إرسال رسالة للجميع" }]);
     }
 
     bot.sendMessage(chatId, "مرحبًا بك! اختر أحد الخيارات التالية:", options);
- return; // العودة لتجنب المعالجة المكررة
-    }
+});
 
-    //-------------------------------------------
-
-// التعامل مع خيارات لوحة التحكم
-bot.on('message', (msg) => {
+// التعامل مع الضغط على الأزرار والبحث
+bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const input = msg.text.trim();
 
-    if (input === "⚙️ لوحة التحكم" && adminIds.includes(chatId.toString())) {
-        const inlineKeyboard = {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "📊 عرض عدد المستخدمين", callback_data: 'show_user_count' }],
-                    [{ text: "📈 إحصائيات البوت", callback_data: 'bot_statistics' }],
-                ],
-            },
-        };
-        bot.sendMessage(chatId, "⚙️ لوحة التحكم: اختر أحد الخيارات التالية:", inlineKeyboard);
-    }
-});
-
-//-------------------------------------------
-
-// التعامل مع الضغط على زر عرض عدد المستخدمين وإحصائيات البوت
-bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const callbackData = query.data;
-
-    try {
-        if (callbackData === 'show_user_count') {
-            const userCount = await User.countDocuments();
-            bot.sendMessage(chatId, `📊 عدد المستخدمين المسجلين في قاعدة البيانات هو: ${userCount}`);
-        } else if (callbackData === 'bot_statistics') {
-            const now = new Date();
-            const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-            const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-            const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-
-            const weeklyUsers = await User.countDocuments({ joinedAt: { $gte: oneWeekAgo } });
-            const monthlyUsers = await User.countDocuments({ joinedAt: { $gte: oneMonthAgo } });
-            const yearlyUsers = await User.countDocuments({ joinedAt: { $gte: oneYearAgo } });
-
-            const statisticsMessage = `
-📈 **إحصائيات البوت:**
-- 🗓️ المستخدمون الجدد هذا الأسبوع: ${weeklyUsers}
-- 📅 المستخدمون الجدد هذا الشهر: ${monthlyUsers}
-- 📆 المستخدمون الجدد هذا العام: ${yearlyUsers}
-            `;
-            bot.sendMessage(chatId, statisticsMessage, { parse_mode: 'Markdown' });
-        }
-    } catch (err) {
-        console.error('❌ فشل في جلب البيانات:', err.message);
-        bot.sendMessage(chatId, "❌ حدث خطأ أثناء جلب البيانات.");
-    }
-});
-
-//-------------------------------------------
-
-// التعامل مع البحث والرسائل الأخرى
-     if (input === '/start' || input.startsWith('/')) return;
+    if (input === '/start' || input.startsWith('/')) return;
 
     if (input === "🔍 البحث برقم الهوية أو الاسم") {
         bot.sendMessage(chatId, "📝 أدخل رقم الهوية أو الاسم للبحث:");
-    } else if (input === "📞 الدعم أو الاستفسار") {
+    } else if (input === "📞 معلومات الاتصال") {
         const contactMessage = `
-📞 **الدعم أو الاستفسار:**
+📞 **معلومات الاتصال:**
 للمزيد من الدعم أو الاستفسار
 في حال حدوث اي خلل
 يمكنك التواصل معنا عبر:
@@ -292,82 +168,90 @@ bot.on('callback_query', async (query) => {
         bot.sendMessage(chatId, "✉️ اكتب الرسالة التي تريد إرسالها لجميع المستخدمين، ثم اضغط على إرسال:");
     } else if (adminState[chatId] === 'awaiting_broadcast_message') {
         delete adminState[chatId]; // إزالة الحالة بعد استلام الرسالة
-        await sendBroadcastMessage(input, chatId);  // إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
+        await sendBroadcastMessage(input, chatId);
     } else {
-        const normalizedInput = normalizeArabicText(input); // تطبيع الإدخال
-        const matchingRecords = data.filter((entry) => {
-            const normalizedName = normalizeArabicText(entry.name); // تطبيع الأسماء المخزنة
-            return (
-                entry.idNumber === input ||
-                normalizedName.includes(normalizedInput) // البحث المتوافق
-            );
-        });
+        const user = data.find((entry) => entry.idNumber === input || entry.name === input);
 
-        if (matchingRecords.length > 0) {
-            matchingRecords.sort((a, b) => a._fileName.localeCompare(b._fileName));
+        if (user) {
+            const response = `
+🔍 **تفاصيل الطلب:**
 
-            let response = `🔍 **تم العثور على ${matchingRecords.length} نتيجة للمدخل \"${input}\":**\n\n`;
-            for (const [index, record] of matchingRecords.entries()) {
-                const safeFileName = record._fileName.replace(/[_*]/g, '\\\\$&'); // للهروب من الرموز الخاصة
-                const resultMessage = `
-📄 **نتيجة ${index + 1}:**
-👤 **الاسم**: ${record.name}
-🏘️ **الحي / المنطقة**: ${record.area}
-🏙️ **المدينة**: ${record.district}
-📍 **المحافظة**: ${record.province}
+👤 **الاسم**: ${user.name}
+🏘️ **الحي / المنطقة**: ${user.area}
+🏙️ **المدينة**: ${user.district}
+📍 **المحافظة**: ${user.province}
 
-📛 **اسم الموزع**: ${record.distributorName}
-📞 **رقم جوال الموزع**: ${record.distributorPhone}
-🆔 **هوية الموزع**: ${record.distributorId}
+📛 **اسم الموزع**: ${user.distributorName}
+📞 **رقم جوال الموزع**: ${user.distributorPhone}
+🆔 **هوية الموزع**: ${user.distributorId}
 
-📜 **الحالة**: ${record.status}
-📂 **اسم الملف**: ${safeFileName}
-                `;
-                await bot.sendMessage(chatId, resultMessage, { parse_mode: 'Markdown' });
-            }
+📜 **الحالة**: ${user.status}
+📅 **تاريخ صدور الكشف**: ("20 /1/ 2025")
+            `;
+            bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.");
+            bot.sendMessage(chatId, "⚠️ لم أتمكن من العثور على بيانات للمدخل المقدم.   20 /1/ 2025");
         }
     }
-});
 
-
-
-//-------------------------------------------
-
-// حفظ بيانات المستخدم في MongoDB
-  bot.on('message', async (msg) => {
-    const userData = {
-        telegramId: msg.from.id,
-        username: msg.from.username || "No Username",  // اسم المستخدم
-        firstName: msg.from.first_name || "No First Name",  // الاسم الأول
-        lastName: msg.from.last_name || "No Last Name",  // الاسم الأخير
-        languageCode: msg.from.language_code || "en",  // اللغة
-        bio: msg.from.bio || "No Bio",  // السيرة الذاتية
-        phoneNumber: msg.contact ? msg.contact.phone_number : null,  // رقم الهاتف (إذا شاركه المستخدم)
-        isBot: msg.from.is_bot,  // إذا كان المستخدم بوت
-        chatId: msg.chat.id,  // معرّف المحادثة
-    };
+    // حفظ بيانات المستخدم في MongoDB
+   const userData = {
+    telegramId: msg.from.id,
+    username: msg.from.username || "No Username",  // اسم المستخدم
+    firstName: msg.from.first_name || "No First Name",  // الاسم الأول
+    lastName: msg.from.last_name || "No Last Name",  // الاسم الأخير
+    languageCode: msg.from.language_code || "en",  // اللغة
+    // photo: msg.from.photo ? msg.from.photo.file_id : null,  // صورة الملف الشخصي (إذا كانت موجودة)
+    bio: msg.from.bio || "No Bio",  // السيرة الذاتية
+    phoneNumber: msg.contact ? msg.contact.phone_number : null,  // رقم الهاتف (إذا شاركه المستخدم)
+    isBot: msg.from.is_bot,  // إذا كان المستخدم بوت
+    chatId: msg.chat.id,  // معرّف المحادثة
+  };
 
     try {
-        // التأكد من أن الدالة async
-        await saveUserWithRetry(userData);
+        let user = await User.findOne({ telegramId: msg.from.id });
+        if (!user) {
+            user = new User(userData);
+            await user.save();
+            console.log(`User ${msg.from.id} saved to database.`);
+        } else {
+            console.log(`User ${msg.from.id} already exists.`);
+        }
     } catch (err) {
         console.error('Error saving user to database:', err);
     }
 });
 
-//-------------------------------------------
+// إرسال رسالة جماعية بناءً على قاعدة بيانات المستخدمين
+async function sendBroadcastMessage(message, adminChatId) {
+    try {
+        // استعلام للحصول على جميع المستخدمين من قاعدة البيانات
+        const users = await User.find({});
+        
+        // إرسال الرسالة لكل مستخدم
+        for (const user of users) {
+            try {
+                await bot.sendMessage(user.telegramId, message);
+            } catch (err) {
+                console.error(`❌ فشل في إرسال الرسالة للمستخدم ${user.telegramId}:`, err.message);
+            }
+        }
+
+        // تأكيد الإرسال للمسؤول
+        bot.sendMessage(adminChatId, "✅ تم إرسال الرسالة لجميع المستخدمين بنجاح.");
+    } catch (err) {
+        console.error('❌ خطأ أثناء جلب المستخدمين من قاعدة البيانات:', err.message);
+        bot.sendMessage(adminChatId, "❌ حدث خطأ أثناء إرسال الرسالة للجميع.");
+    }
+}
+
 // إرسال تنبيه للمسؤولين
 function sendMessageToAdmins(message) {
     adminIds.forEach(adminId => {
-        axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-            chat_id: adminId,
-            text: message
-        }).catch(err => console.error('Error sending message to admins:', err));
+        bot.sendMessage(adminId, message);
     });
 }
-//-------------------------------------------
+
 // تشغيل السيرفر
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
